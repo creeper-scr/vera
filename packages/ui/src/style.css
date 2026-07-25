@@ -1,0 +1,9 @@
+/*
+ * NOTICE:
+ * This file is a source-time placeholder for @proj-vera/ui/style.css.
+ * The production build writes the real generated UnoCSS output to dist/style.css.
+ * Docs dev aliases @proj-vera/ui to packages/ui/src, so package CSS imports need this
+ * file to resolve before build output exists.
+ * Remove this file only if docs dev no longer aliases @proj-vera/ui to source or if
+ * @proj-vera/ui ships a real source CSS entry.
+ */

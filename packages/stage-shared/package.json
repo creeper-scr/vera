@@ -1,0 +1,44 @@
+{
+  "name": "@proj-vera/stage-shared",
+  "type": "module",
+  "private": true,
+  "description": "Shared",
+  "author": {
+    "name": "Moeru AI Project Vera Team",
+    "email": "vera@moeru.ai",
+    "url": "https://github.com/moeru-ai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moeru-ai/airi.git",
+    "directory": "packages/stage-shared"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./beat-sync": "./src/beat-sync/index.ts",
+    "./global-shortcut": "./src/global-shortcut/index.ts",
+    "./godot-stage": "./src/godot-stage/index.ts",
+    "./doubao-realtime-voice-protocol": "./src/doubaoRealtimeVoiceProtocol.ts",
+    "./server-channel-qr": "./src/server-channel-qr.ts",
+    "./composables": "./src/composables/index.ts",
+    "./webgpu": "./src/webgpu/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@moeru/std": "catalog:",
+    "@vueuse/core": "catalog:",
+    "gpuu": "catalog:",
+    "pinia": "catalog:",
+    "valibot": "catalog:",
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "@moeru/eventa": "catalog:",
+    "@nekopaw/tempora": "catalog:",
+    "@types/audioworklet": "catalog:"
+  }
+}

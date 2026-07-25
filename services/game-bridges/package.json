@@ -1,0 +1,32 @@
+{
+  "name": "@proj-vera/game-bridges",
+  "type": "module",
+  "version": "0.11.3",
+  "private": true,
+  "description": "Vera game-coop adapters for Stardew Valley and Don't Starve Together file bridges",
+  "author": {
+    "name": "Moeru AI Project Vera Team",
+    "email": "vera@moeru.ai",
+    "url": "https://github.com/moeru-ai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moeru-ai/airi.git",
+    "directory": "services/game-bridges"
+  },
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env.local src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config ./vitest.config.ts"
+  },
+  "dependencies": {
+    "@moeru/std": "catalog:",
+    "@proj-vera/game-coop-core": "workspace:*",
+    "@proj-vera/server-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "vitest": "catalog:vitest"
+  }
+}

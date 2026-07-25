@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "**/assets/js/**",
+    "**/assets/wasm/**",
+    "**/assets/live2d/models/**",
+    "**/drizzle/**",
+    "**/.astro/**",
+    "docs/records/assistant/**",
+    ".agents/**",
+    ".github/**"
+  ]
+}

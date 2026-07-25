@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#14120f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Vera" />
+  <title>Vera · 有人在等你</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&family=Spectral:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #14120f;
+      --bg-elevated: #1c1914;
+      --panel: #252018;
+      --text: #f3eee4;
+      --muted: #a89f90;
+      --accent: #c9a46c;
+      --accent-deep: #8f7348;
+      --listen: #6f9e8c;
+      --danger: #c45c48;
+      --user-bg: #2a3328;
+      --user: #d5e0c8;
+      --bot-bg: #2e261c;
+      --bot: #f0e2c8;
+      --line: rgba(243, 238, 228, 0.1);
+      --dock-max: 22.5rem;
+      --radius: 14px;
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background:
+        radial-gradient(120% 70% at 100% -20%, rgba(201, 164, 108, 0.16), transparent 55%),
+        radial-gradient(90% 50% at 0% 10%, rgba(111, 158, 140, 0.12), transparent 45%),
+        linear-gradient(180deg, #18150f 0%, var(--bg) 40%, #10100e 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: calc(12px + var(--safe-t)) 18px 10px;
+      background: linear-gradient(180deg, rgba(20, 18, 15, 0.96) 60%, transparent);
+      backdrop-filter: blur(10px);
+    }
+    .brand-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      font-family: Spectral, "Noto Serif SC", Georgia, serif;
+      font-size: 1.65rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin: 0;
+    }
+    .brand span { color: var(--accent); }
+    #meta {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(28, 25, 20, 0.85);
+      max-width: 46%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tagline {
+      margin: 8px 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 28ch;
+    }
+    #status {
+      margin: 0 18px 8px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.4;
+      word-break: break-all;
+    }
+    #status.err {
+      color: #f0b4a8;
+      border-color: rgba(196, 92, 72, 0.35);
+      background: rgba(196, 92, 72, 0.1);
+    }
+    #feed {
+      flex: 1;
+      overflow: auto;
+      padding: 4px 18px calc(210px + var(--safe-b));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    .bubble {
+      max-width: 88%;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      animation: rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--user-bg);
+      color: var(--user);
+      border-bottom-right-radius: 5px;
+    }
+    .bubble.assistant {
+      align-self: flex-start;
+      background: var(--bot-bg);
+      color: var(--bot);
+      border-bottom-left-radius: 5px;
+    }
+    .bubble.system {
+      align-self: center;
+      max-width: 100%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-align: center;
+      padding: 4px 8px;
+    }
+    footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 14px 18px calc(14px + var(--safe-b));
+      background: linear-gradient(180deg, transparent 0%, rgba(20, 18, 15, 0.55) 18%, var(--bg) 42%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .dock {
+      width: min(100%, var(--dock-max));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(28, 25, 20, 0.92);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    }
+    .modes {
+      display: flex;
+      width: 100%;
+      padding: 3px;
+      border-radius: 12px;
+      background: #17140f;
+      border: 1px solid var(--line);
+    }
+    .modes button {
+      flex: 1;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: background 140ms ease, color 140ms ease;
+    }
+    .modes button.active {
+      background: rgba(201, 164, 108, 0.16);
+      color: var(--text);
+    }
+    .modes button:focus-visible,
+    .row button:focus-visible,
+    #action:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    #level {
+      width: 100%;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(243, 238, 228, 0.08);
+      overflow: hidden;
+    }
+    #level > i {
+      display: block;
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(0);
+      background: linear-gradient(90deg, var(--accent-deep), var(--accent), var(--listen));
+      transition: transform 60ms linear;
+      will-change: transform;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    .row button {
+      flex: 1;
+      height: 38px;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border: 1px solid var(--line);
+      transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+    .row button:active {
+      background: rgba(243, 238, 228, 0.05);
+      color: var(--text);
+    }
+    #action {
+      width: 100%;
+      height: 58px;
+      border: 0;
+      border-radius: 999px;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: #1a1610;
+      background: var(--accent);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+      touch-action: none;
+      user-select: none;
+      transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    }
+    #action.hot {
+      background: var(--danger);
+      color: #fff8f5;
+      transform: scale(0.985);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+    #action.listening {
+      background: var(--listen);
+      color: #0f1714;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    }
+    #action:disabled {
+      opacity: 0.4;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand-row">
+      <h1 class="brand">Vera <span>·</span> 随身</h1>
+      <span id="meta">boot</span>
+    </div>
+    <p class="tagline">游戏里一起走过的路，带到手机上继续聊。</p>
+  </header>
+  <div id="status">加载中…</div>
+  <div id="feed" aria-live="polite"></div>
+  <footer>
+    <div class="dock">
+      <div class="modes" role="group" aria-label="音频模式">
+        <button type="button" id="mode-ptt" class="active">按住说</button>
+        <button type="button" id="mode-vad">自动听</button>
+      </div>
+      <div id="level" aria-hidden="true"><i id="level-bar"></i></div>
+      <div class="row">
+        <button type="button" id="btn-pull">拉取记忆</button>
+        <button type="button" id="btn-clear">清本地</button>
+      </div>
+      <button type="button" id="action" disabled>按住说话</button>
+    </div>
+  </footer>
+
+  <script>
+    /*__LAN_CONFIG__*/
+  </script>
+  <script>
+    const OBFUSCATE_KEY = 0x5A
+    const STORAGE_KEY = 'vera-lan-chat-export-v1'
+    const MODE_KEY = 'vera-lan-audio-mode-v1'
+    /** @typedef {'ptt' | 'vad'} AudioMode */
+
+    const lan = window.__LAN__ || {
+      exportUrl: '/lan/export.json',
+      wsPath: '/api/v1/audio/realtime/ws',
+      wsUrl: '',
+      cred: '',
+      botName: 'Vera',
+      hasCred: false,
+    }
+
+    /**
+     * Prefer same-origin Vite proxy (ws/wss follows page protocol).
+     */
+    function resolveWsUrl() {
+      if (lan.wsPath) {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+        return `${proto}//${location.host}${lan.wsPath}`
+      }
+      return String(lan.wsUrl || '')
+    }
+
+    const statusEl = document.getElementById('status')
+    const feedEl = document.getElementById('feed')
+    const metaEl = document.getElementById('meta')
+    const actionEl = document.getElementById('action')
+    const levelBar = document.getElementById('level-bar')
+    const btnPull = document.getElementById('btn-pull')
+    const btnClear = document.getElementById('btn-clear')
+    const modePttBtn = document.getElementById('mode-ptt')
+    const modeVadBtn = document.getElementById('mode-vad')
+
+    /** Energy VAD knobs (hackathon-friendly, no WASM model). */
+    const VAD_SPEECH_RMS = 0.018
+    const VAD_HANGOVER_MS = 700
+    const VAD_PREROLL_FRAMES = 4
+
+    /** @type {any} */
+    let exportPayload = null
+    /** @type {WebSocket | null} */
+    let socket = null
+    /** @type {MediaStream | null} */
+    let mediaStream = null
+    /** @type {AudioContext | null} */
+    let captureCtx = null
+    /** @type {ScriptProcessorNode | null} */
+    let processor = null
+    /** @type {AudioContext | null} */
+    let playbackCtx = null
+    let playbackAt = 0
+    let sessionId = ''
+    let holding = false
+    let sessionReady = false
+    let pendingUserText = ''
+    let assistantBuf = ''
+    let assistantSpeaking = false
+    let vadListening = false
+    let vadSpeechOpen = false
+    let vadLastSpeechAt = 0
+    /** @type {ArrayBuffer[]} */
+    let vadPreroll = []
+    /** @type {AudioMode} */
+    let audioMode = (localStorage.getItem(MODE_KEY) === 'vad' ? 'vad' : 'ptt')
+
+    /**
+     * UUID for non-secure LAN HTTP (mobile browsers often lack crypto.randomUUID).
+     */
+    function makeId() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        return crypto.randomUUID()
+      if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(16)
+        crypto.getRandomValues(bytes)
+        bytes[6] = (bytes[6] & 0x0f) | 0x40
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('')
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+      }
+      return `lan-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+    }
+
+    /**
+     * @param {string} encoded
+     * @returns {{ appId: string, accessKey: string }}
+     */
+    function deobfuscateCred(encoded) {
+      const raw = atob(encoded)
+      const bytes = new Uint8Array(raw.length)
+      for (let i = 0; i < raw.length; i++)
+        bytes[i] = raw.charCodeAt(i) ^ OBFUSCATE_KEY
+      const text = new TextDecoder().decode(bytes)
+      const [appId = '', accessKey = ''] = text.split('\n')
+      return { appId: appId.trim(), accessKey: accessKey.trim() }
+    }
+
+    /**
+     * @param {string} text
+     * @param {boolean} [isError]
+     */
+    function setStatus(text, isError) {
+      statusEl.textContent = text
+      statusEl.classList.toggle('err', Boolean(isError))
+    }
+
+    /**
+     * @param {'user' | 'assistant' | 'system'} role
+     * @param {string} text
+     */
+    function pushBubble(role, text) {
+      const el = document.createElement('div')
+      el.className = `bubble ${role}`
+      el.textContent = text
+      feedEl.appendChild(el)
+      feedEl.scrollTop = feedEl.scrollHeight
+    }
+
+    /**
+     * Flatten chat-sessions-index:v1 into prompt lines (last N).
+     * @param {any} payload
+     * @param {number} [limit]
+     */
+    function historyPrompt(payload, limit = 40) {
+      if (!payload || payload.format !== 'chat-sessions-index:v1')
+        return ''
+      /** @type {string[]} */
+      const lines = []
+      const sessions = payload.sessions || {}
+      for (const record of Object.values(sessions)) {
+        const messages = (record && record.messages) || []
+        for (const msg of messages) {
+          if (!msg || (msg.role !== 'user' && msg.role !== 'assistant'))
+            continue
+          const content = typeof msg.content === 'string'
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content.map((p) => (p && p.type === 'text' ? p.text : '')).join('')
+              : ''
+          const text = String(content || '').trim()
+          if (!text)
+            continue
+          lines.push(`${msg.role}: ${text}`)
+        }
+      }
+      return lines.slice(-limit).join('\n')
+    }
+
+    /**
+     * @param {any} payload
+     */
+    function previewHistory(payload) {
+      feedEl.innerHTML = ''
+      const prompt = historyPrompt(payload, 12)
+      if (!prompt) {
+        pushBubble('system', '历史为空或格式不对')
+        return
+      }
+      pushBubble('system', '游戏记忆已装进手机 · 可在生活里继续聊')
+      for (const line of prompt.split('\n')) {
+        if (line.startsWith('user: '))
+          pushBubble('user', line.slice(6))
+        else if (line.startsWith('assistant: '))
+          pushBubble('assistant', line.slice(11))
+      }
+    }
+
+    function canTalk() {
+      return Boolean(lan.hasCred && (lan.wsPath || lan.wsUrl))
+    }
+
+    /**
+     * Mic APIs need a secure context (HTTPS / localhost). Plain LAN HTTP → undefined.
+     */
+    function requireMic() {
+      const devices = navigator.mediaDevices
+      if (devices && typeof devices.getUserMedia === 'function')
+        return devices
+      const isHttpLan = location.protocol === 'http:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'
+      if (isHttpLan) {
+        throw new Error(
+          '当前是 HTTP 局域网，浏览器禁用麦克风。请改用 HTTPS 打开本页，或在 Android Chrome 打开 chrome://flags → 搜索 insecure origins treated as secure → 填入本站 origin（含端口）并 Relaunch。',
+        )
+      }
+      throw new Error('浏览器不支持 getUserMedia / mediaDevices')
+    }
+
+    function syncModeUi() {
+      modePttBtn.classList.toggle('active', audioMode === 'ptt')
+      modeVadBtn.classList.toggle('active', audioMode === 'vad')
+      actionEl.classList.toggle('listening', audioMode === 'vad' && vadListening)
+      if (audioMode === 'ptt') {
+        actionEl.textContent = holding ? '松开发送…' : '按住说话'
+        actionEl.classList.toggle('hot', holding)
+      }
+      else {
+        actionEl.textContent = vadListening ? '聆听中 · 点按停止' : '开始聆听 (VAD)'
+        actionEl.classList.toggle('hot', false)
+      }
+    }
+
+    /**
+     * @param {AudioMode} mode
+     */
+    async function setAudioMode(mode) {
+      if (mode === audioMode)
+        return
+      await stopCapture()
+      holding = false
+      vadListening = false
+      vadSpeechOpen = false
+      vadPreroll = []
+      audioMode = mode
+      localStorage.setItem(MODE_KEY, mode)
+      syncModeUi()
+      setStatus(mode === 'ptt'
+        ? 'PTT：按住说话，松手等待回复'
+        : 'VAD：点开始后自动侦测语音（能量门限）')
+    }
+
+    function persistExport(payload) {
+      exportPayload = payload
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+      const count = Object.keys(payload.sessions || {}).length
+      metaEl.textContent = `${count} sessions · ${audioMode.toUpperCase()}`
+      previewHistory(payload)
+      setStatus(`记忆已在本地 · Doubao ${lan.hasCred ? 'ok' : '缺 key'} · ${resolveWsUrl()} · ${location.protocol}`)
+      actionEl.disabled = !canTalk()
+      syncModeUi()
+    }
+
+    async function pullExport() {
+      setStatus('拉取游戏记忆 /lan/export.json …')
+      const res = await fetch(lan.exportUrl, { cache: 'no-store' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const payload = await res.json()
+      if (payload.format !== 'chat-sessions-index:v1')
+        throw new Error('export format mismatch')
+      persistExport(payload)
+    }
+
+    async function clearLocal() {
+      await stopCapture()
+      vadListening = false
+      holding = false
+      localStorage.removeItem(STORAGE_KEY)
+      exportPayload = null
+      feedEl.innerHTML = ''
+      metaEl.textContent = 'empty'
+      setStatus('本地记忆已清。可再点「拉取历史」。')
+      pushBubble('system', '等待从电脑同步游戏经历')
+      syncModeUi()
+    }
+
+    /**
+     * @param {Float32Array} input
+     */
+    function rmsOf(input) {
+      let sum = 0
+      for (let i = 0; i < input.length; i++)
+        sum += input[i] * input[i]
+      return Math.sqrt(sum / Math.max(1, input.length))
+    }
+
+    /**
+     * @param {Float32Array} input
+     */
+    function float32ToPcm16(input) {
+      const out = new ArrayBuffer(input.length * 2)
+      const view = new DataView(out)
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]))
+        view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
+      }
+      return out
+    }
+
+    /**
+     * @param {ArrayBuffer} pcm
+     */
+    function playPcm(pcm) {
+      if (pcm.byteLength < 2)
+        return
+      assistantSpeaking = true
+      const ctx = playbackCtx || new AudioContext({ sampleRate: 24000 })
+      playbackCtx = ctx
+      const samples = new DataView(pcm)
+      const n = Math.floor(samples.byteLength / 2)
+      const buffer = ctx.createBuffer(1, n, 24000)
+      const channel = buffer.getChannelData(0)
+      for (let i = 0; i < n; i++)
+        channel[i] = samples.getInt16(i * 2, true) / 0x8000
+      const src = ctx.createBufferSource()
+      src.buffer = buffer
+      src.connect(ctx.destination)
+      playbackAt = Math.max(ctx.currentTime, playbackAt)
+      src.start(playbackAt)
+      playbackAt += buffer.duration
+      src.onended = () => {
+        if (ctx.currentTime >= playbackAt - 0.02)
+          assistantSpeaking = false
+      }
+    }
+
+    function buildSystemRole() {
+      const history = historyPrompt(exportPayload, 40)
+      return [
+        `你是 ${lan.botName || 'Vera'}。`,
+        '你和玩家刚从游戏里走出来：游戏中经历的事情可以随身携带，进入日常生活。',
+        '承接游戏记忆与当下生活场景，像贴身伙伴一样自然聊天。',
+        '自然、简洁地回应；只输出适合直接朗读的自然口语，不要输出标记或 JSON。',
+        history ? `以下是从电脑同步的近期对话 / 游戏记忆，请承接语境：\n${history}` : '',
+      ].filter(Boolean).join('\n\n')
+    }
+
+    function idleStatusHint() {
+      if (audioMode === 'vad')
+        return vadListening ? 'VAD 聆听中 · 直接说' : 'VAD：点「开始聆听」'
+      return 'PTT：按住说话'
+    }
+
+    async function ensureSocket() {
+      if (socket && socket.readyState === WebSocket.OPEN && sessionReady)
+        return
+      await closeSocket()
+      const { appId, accessKey } = deobfuscateCred(lan.cred || '')
+      if (!appId || !accessKey)
+        throw new Error('豆包 key 未注入（检查 PC 端 VITE_VOLCENGINE_*）')
+
+      sessionId = makeId()
+      sessionReady = false
+      const wsUrl = resolveWsUrl()
+      if (!wsUrl)
+        throw new Error('Doubao WS URL 未配置')
+      socket = new WebSocket(wsUrl)
+      socket.binaryType = 'arraybuffer'
+
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('WebSocket 连接超时')), 12000)
+        socket.addEventListener('open', () => {
+          clearTimeout(t)
+          resolve()
+        }, { once: true })
+        socket.addEventListener('error', () => {
+          clearTimeout(t)
+          reject(new Error(`连不上 Doubao relay：${wsUrl}`))
+        }, { once: true })
+      })
+
+      socket.send(JSON.stringify({
+        event: 'start',
+        appId,
+        accessKey,
+        sessionId,
+        config: {
+          asr: {
+            audio_info: { format: 'pcm', sample_rate: 16000, channel: 1 },
+            extra: {},
+          },
+          dialog: {
+            bot_name: String(lan.botName || 'Vera').slice(0, 20),
+            system_role: buildSystemRole(),
+            speaking_style: '自然、有温度，像把游戏记忆带进生活的伙伴，避免冗长。',
+            dialog_id: `vera-lan-mobile:${sessionId.slice(0, 8)}`,
+            extra: { model: '1.2.1.1', enable_conversation_truncate: true },
+          },
+          tts: {
+            speaker: 'zh_female_vv_jupiter_bigtts',
+            audio_config: { channel: 1, format: 'pcm_s16le', sample_rate: 24000 },
+            extra: {},
+          },
+        },
+      }))
+
+      socket.addEventListener('message', (event) => {
+        if (typeof event.data !== 'string') {
+          playPcm(event.data)
+          return
+        }
+        let msg
+        try {
+          msg = JSON.parse(event.data)
+        }
+        catch {
+          return
+        }
+        if (msg.event === 'session.started') {
+          sessionReady = true
+          setStatus(`豆包就绪 · ${idleStatusHint()}`)
+          return
+        }
+        if (msg.event === 'asr.started') {
+          pendingUserText = ''
+          return
+        }
+        if (msg.event === 'asr.result' && Array.isArray(msg.results)) {
+          for (const item of msg.results) {
+            const text = String(item.text || '').trim()
+            if (!text || item.is_interim)
+              continue
+            pendingUserText = text
+            setStatus(`识别中：${text}`)
+          }
+          return
+        }
+        if (msg.event === 'asr.ended') {
+          if (pendingUserText) {
+            pushBubble('user', pendingUserText)
+            pendingUserText = ''
+          }
+          return
+        }
+        if (msg.event === 'chat.result' && msg.content) {
+          assistantBuf += String(msg.content)
+          return
+        }
+        if (msg.event === 'chat.ended' || msg.event === 'session.finished') {
+          const text = assistantBuf.trim()
+          assistantBuf = ''
+          assistantSpeaking = false
+          if (text)
+            pushBubble('assistant', text)
+          setStatus(idleStatusHint())
+          return
+        }
+        if (msg.event === 'error' || msg.error) {
+          setStatus(msg.message || msg.error || 'Doubao error', true)
+        }
+      })
+
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('session.started 超时')), 15000)
+        const onMsg = (event) => {
+          if (typeof event.data !== 'string')
+            return
+          try {
+            const msg = JSON.parse(event.data)
+            if (msg.event === 'session.started') {
+              clearTimeout(t)
+              socket.removeEventListener('message', onMsg)
+              resolve()
+            }
+            if (msg.event === 'error') {
+              clearTimeout(t)
+              socket.removeEventListener('message', onMsg)
+              reject(new Error(msg.message || 'session failed'))
+            }
+          }
+          catch {}
+        }
+        socket.addEventListener('message', onMsg)
+      })
+    }
+
+    async function closeSocket() {
+      sessionReady = false
+      if (socket) {
+        try {
+          if (socket.readyState === WebSocket.OPEN)
+            socket.send(JSON.stringify({ event: 'stop' }))
+          socket.close(1000)
+        }
+        catch {}
+      }
+      socket = null
+    }
+
+    /**
+     * Decide whether this audio frame should go upstream.
+     * @param {Float32Array} input
+     * @param {number} now
+     */
+    function shouldSendFrame(input, now) {
+      if (!sessionReady || !socket || socket.readyState !== WebSocket.OPEN)
+        return false
+      // Half-duplex: never talk over assistant playback.
+      if (assistantSpeaking)
+        return false
+
+      if (audioMode === 'ptt')
+        return holding
+
+      if (!vadListening)
+        return false
+
+      const rms = rmsOf(input)
+      levelBar.style.transform = `scaleX(${Math.min(1, rms / 0.08)})`
+      if (rms >= VAD_SPEECH_RMS) {
+        vadLastSpeechAt = now
+        if (!vadSpeechOpen) {
+          vadSpeechOpen = true
+          setStatus('VAD 侦测到语音…')
+        }
+        return true
+      }
+      if (vadSpeechOpen && now - vadLastSpeechAt <= VAD_HANGOVER_MS)
+        return true
+      if (vadSpeechOpen && now - vadLastSpeechAt > VAD_HANGOVER_MS) {
+        vadSpeechOpen = false
+        setStatus('VAD 聆听中 · 等待下一句')
+      }
+      return false
+    }
+
+    /**
+     * @param {ArrayBuffer} pcm
+     * @param {boolean} sendNow
+     */
+    function gateAndSend(pcm, sendNow) {
+      if (!socket || socket.readyState !== WebSocket.OPEN)
+        return
+      // Do not buffer mic under assistant playback (half-duplex).
+      if (assistantSpeaking) {
+        vadPreroll = []
+        return
+      }
+      if (audioMode === 'vad' && !sendNow) {
+        vadPreroll.push(pcm)
+        if (vadPreroll.length > VAD_PREROLL_FRAMES)
+          vadPreroll.shift()
+        return
+      }
+      if (audioMode === 'vad' && sendNow && vadPreroll.length) {
+        for (const frame of vadPreroll)
+          socket.send(frame)
+        vadPreroll = []
+      }
+      if (sendNow)
+        socket.send(pcm)
+    }
+
+    async function startCapture() {
+      if (mediaStream && processor)
+        return
+      const mediaDevices = requireMic()
+      mediaStream = await mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      })
+      captureCtx = new AudioContext({ sampleRate: 16000 })
+      const source = captureCtx.createMediaStreamSource(mediaStream)
+      processor = captureCtx.createScriptProcessor(4096, 1, 1)
+      const silent = captureCtx.createGain()
+      silent.gain.value = 0
+      processor.onaudioprocess = (ev) => {
+        const input = ev.inputBuffer.getChannelData(0)
+        const now = performance.now()
+        if (audioMode === 'ptt')
+          levelBar.style.transform = `scaleX(${Math.min(1, rmsOf(input) / 0.08)})`
+        const send = shouldSendFrame(input, now)
+        gateAndSend(float32ToPcm16(input), send)
+      }
+      source.connect(processor)
+      processor.connect(silent)
+      silent.connect(captureCtx.destination)
+    }
+
+    async function stopCapture() {
+      try {
+        processor && processor.disconnect()
+      }
+      catch {}
+      processor = null
+      if (captureCtx) {
+        await captureCtx.close().catch(() => {})
+        captureCtx = null
+      }
+      if (mediaStream) {
+        for (const track of mediaStream.getTracks())
+          track.stop()
+        mediaStream = null
+      }
+      levelBar.style.transform = 'scaleX(0)'
+      vadSpeechOpen = false
+      vadPreroll = []
+    }
+
+    async function onPttStart(ev) {
+      if (audioMode !== 'ptt')
+        return
+      ev.preventDefault()
+      if (holding)
+        return
+      holding = true
+      syncModeUi()
+      try {
+        await ensureSocket()
+        await startCapture()
+        setStatus('PTT 聆听中…')
+      }
+      catch (error) {
+        holding = false
+        syncModeUi()
+        setStatus(error instanceof Error ? error.message : String(error), true)
+        await stopCapture()
+      }
+    }
+
+    async function onPttEnd(ev) {
+      if (audioMode !== 'ptt')
+        return
+      ev.preventDefault()
+      if (!holding)
+        return
+      holding = false
+      syncModeUi()
+      await stopCapture()
+      setStatus('等待回复…')
+    }
+
+    async function onVadToggle() {
+      if (audioMode !== 'vad')
+        return
+      try {
+        if (vadListening) {
+          vadListening = false
+          await stopCapture()
+          syncModeUi()
+          setStatus('VAD 已停止')
+          return
+        }
+        await ensureSocket()
+        await startCapture()
+        vadListening = true
+        syncModeUi()
+        setStatus('VAD 聆听中 · 直接说')
+      }
+      catch (error) {
+        vadListening = false
+        syncModeUi()
+        setStatus(error instanceof Error ? error.message : String(error), true)
+        await stopCapture()
+      }
+    }
+
+    modePttBtn.addEventListener('click', () => {
+      setAudioMode('ptt').catch(err => setStatus(err.message || String(err), true))
+    })
+    modeVadBtn.addEventListener('click', () => {
+      setAudioMode('vad').catch(err => setStatus(err.message || String(err), true))
+    })
+
+    btnPull.addEventListener('click', () => {
+      pullExport().catch(err => setStatus(err.message || String(err), true))
+    })
+    btnClear.addEventListener('click', () => {
+      clearLocal().catch(err => setStatus(err.message || String(err), true))
+    })
+
+    actionEl.addEventListener('pointerdown', (ev) => {
+      if (audioMode === 'ptt')
+        onPttStart(ev)
+    })
+    actionEl.addEventListener('pointerup', (ev) => {
+      if (audioMode === 'ptt')
+        onPttEnd(ev)
+    })
+    actionEl.addEventListener('pointercancel', (ev) => {
+      if (audioMode === 'ptt')
+        onPttEnd(ev)
+    })
+    actionEl.addEventListener('pointerleave', (ev) => {
+      if (audioMode === 'ptt' && holding)
+        onPttEnd(ev)
+    })
+    actionEl.addEventListener('click', () => {
+      if (audioMode === 'vad')
+        onVadToggle()
+    })
+
+    // boot
+    syncModeUi()
+    ;(async () => {
+      const cached = localStorage.getItem(STORAGE_KEY)
+      if (cached) {
+        try {
+          persistExport(JSON.parse(cached))
+          setStatus(`游戏记忆已恢复 · ${idleStatusHint()}`)
+          return
+        }
+        catch {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+      try {
+        await pullExport()
+      }
+      catch (error) {
+        await clearLocal()
+        setStatus(
+          `自动拉取失败：${error instanceof Error ? error.message : String(error)}。请先在 PC 点「分享到手机」。`,
+          true,
+        )
+      }
+    })()
+  </script>
+</body>
+</html>

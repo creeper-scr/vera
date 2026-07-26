@@ -128,7 +128,10 @@ async function main() {
           ],
           reconnect: {
             enabled: true,
-            maxRetries: 5,
+            // Never give up on LAN flaps / protocol drops; backoff instead.
+            maxRetries: Number.POSITIVE_INFINITY,
+            baseDelayMs: 1_000,
+            maxDelayMs: 30_000,
           },
         })
 

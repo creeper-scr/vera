@@ -10,7 +10,7 @@
     "email": "vera@moeru.ai",
     "url": "https://github.com/moeru-ai"
   },
-  "license": "MIT",
+  "license": "UNLICENSED",
   "scripts": {
     "postinstall": "pnpm exec simple-git-hooks && pnpm run build:packages",
     "dev": "pnpm -r -F @proj-vera/stage-web dev",

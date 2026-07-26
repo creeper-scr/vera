@@ -28,6 +28,8 @@ export interface MineflayerOptions {
   reconnect?: {
     enabled?: boolean
     maxRetries?: number
+    baseDelayMs?: number
+    maxDelayMs?: number
   }
 }
 

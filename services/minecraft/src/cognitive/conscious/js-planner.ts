@@ -1236,7 +1236,9 @@ globalThis.expectMoved = (minBlocks, message) => {
     'chat', 'giveUp', 'skip', 'stop', 'followPlayer', 'clearFollowTarget',
     'givePlayer', 'consume', 'equip', 'putInChest', 'takeFromChest', 'discard',
     'collectBlocks', 'mineBlockAt', 'craftRecipe', 'smeltItem', 'clearFurnace',
-    'placeHere', 'attack', 'attackPlayer', 'activate', 'recipePlan',
+    'placeAt', 'placeHere', 'attack', 'attackPlayer', 'activate', 'recipePlan',
+    'lookAt', 'goToNearestBlock', 'goToNearestEntity', 'moveAway', 'digDown', 'goToSurface',
+    'tillAndSow', 'chest',
   ]
 
   if (!globalThis.lastAction || (typeof actionName === 'string' && nonMovingActions.includes(actionName)))

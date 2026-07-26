@@ -130,15 +130,22 @@ describe('minecraft game adapter', () => {
       'minecraft.equip',
       'minecraft.eat',
       'minecraft.sleep',
-      'minecraft.recipe',
       'minecraft.craft',
       'minecraft.smelt',
       'minecraft.clear_furnace',
       'minecraft.place',
       'minecraft.attack',
-      'minecraft.chest_put',
-      'minecraft.chest_take',
+      'minecraft.chest',
       'minecraft.discard',
+      'minecraft.mine_at',
+      'minecraft.look',
+      'minecraft.goto_block',
+      'minecraft.goto_entity',
+      'minecraft.move_away',
+      'minecraft.dig_down',
+      'minecraft.goto_surface',
+      'minecraft.farm',
+      'minecraft.waypoint',
     ])
   })
 
@@ -306,6 +313,7 @@ describe('minecraft game adapter', () => {
     expect(driver.executeAction).toHaveBeenNthCalledWith(7, 'craftRecipe', {
       recipe_name: 'stick',
       num: 1,
+      mode: 'execute',
     })
     expect(driver.executeAction).toHaveBeenNthCalledWith(8, 'attack', {
       type: 'zombie',
@@ -366,55 +374,87 @@ describe('minecraft game adapter', () => {
     await adapter.execute(command('minecraft.equip', 'equip-1', { itemName: 'iron_sword' }))
     await adapter.execute(command('minecraft.eat', 'eat-1', { itemName: 'cooked_beef' }))
     await adapter.execute(command('minecraft.sleep', 'sleep-1'))
-    await adapter.execute(command('minecraft.recipe', 'recipe-1', {
+    await adapter.execute(command('minecraft.craft', 'craft-plan-1', {
       itemName: 'stone_pickaxe',
       count: 1,
+      mode: 'plan',
     }))
     await adapter.execute(command('minecraft.smelt', 'smelt-1', {
       itemName: 'iron_ore',
       count: 2,
     }))
     await adapter.execute(command('minecraft.clear_furnace', 'furnace-1'))
-    await adapter.execute(command('minecraft.place', 'place-1', { blockType: 'torch' }))
-    await adapter.execute(command('minecraft.chest_put', 'chest-put-1', {
+    await adapter.execute(command('minecraft.place', 'place-1', {
+      blockType: 'torch',
+      target: '10,64,12',
+    }))
+    await adapter.execute(command('minecraft.chest', 'chest-put-1', {
+      action: 'put',
       itemName: 'cobblestone',
       count: 16,
     }))
-    await adapter.execute(command('minecraft.chest_take', 'chest-take-1', {
-      itemName: 'coal',
-      count: 4,
+    await adapter.execute(command('minecraft.chest', 'chest-view-1', {
+      action: 'view',
     }))
     await adapter.execute(command('minecraft.discard', 'discard-1', {
       itemName: 'dirt',
       count: 8,
     }))
+    await adapter.execute(command('minecraft.mine_at', 'mine-1', {
+      target: '3,64,4',
+      expectedBlockType: 'oak_log',
+    }))
+    await adapter.execute(command('minecraft.waypoint', 'wp-set', {
+      action: 'set',
+      name: 'camp',
+    }))
+    await adapter.execute(command('minecraft.waypoint', 'wp-goto', {
+      action: 'goto',
+      name: 'camp',
+    }))
 
     expect(driver.executeAction).toHaveBeenNthCalledWith(1, 'equip', { item_name: 'iron_sword' })
     expect(driver.executeAction).toHaveBeenNthCalledWith(2, 'consume', { item_name: 'cooked_beef' })
     expect(driver.executeAction).toHaveBeenNthCalledWith(3, 'goToBed', {})
-    expect(driver.executeAction).toHaveBeenNthCalledWith(4, 'recipePlan', {
-      item_name: 'stone_pickaxe',
-      amount: 1,
+    expect(driver.executeAction).toHaveBeenNthCalledWith(4, 'craftRecipe', {
+      recipe_name: 'stone_pickaxe',
+      num: 1,
+      mode: 'plan',
     })
     expect(driver.executeAction).toHaveBeenNthCalledWith(5, 'smeltItem', {
       item_name: 'iron_ore',
       num: 2,
     })
     expect(driver.executeAction).toHaveBeenNthCalledWith(6, 'clearFurnace', {})
-    expect(driver.executeAction).toHaveBeenNthCalledWith(7, 'placeHere', { type: 'torch' })
-    expect(driver.executeAction).toHaveBeenNthCalledWith(8, 'putInChest', {
+    expect(driver.executeAction).toHaveBeenNthCalledWith(7, 'placeAt', {
+      type: 'torch',
+      x: 10,
+      y: 64,
+      z: 12,
+    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(8, 'chest', {
+      action: 'put',
       item_name: 'cobblestone',
       num: 16,
     })
-    expect(driver.executeAction).toHaveBeenNthCalledWith(9, 'takeFromChest', {
-      item_name: 'coal',
-      num: 4,
-    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(9, 'chest', { action: 'view' })
     expect(driver.executeAction).toHaveBeenNthCalledWith(10, 'discard', {
       item_name: 'dirt',
       num: 8,
     })
-    expect(events.filter(event => event.state === 'succeeded')).toHaveLength(10)
+    expect(driver.executeAction).toHaveBeenNthCalledWith(11, 'mineBlockAt', {
+      x: 3,
+      y: 64,
+      z: 4,
+      expected_block_type: 'oak_log',
+    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(12, 'goToCoordinate', {
+      x: snapshot.position!.x,
+      y: snapshot.position!.y,
+      z: snapshot.position!.z,
+      closeness: 1,
+    })
+    expect(events.filter(event => event.state === 'succeeded')).toHaveLength(13)
   })
 
   it('declares companion risk levels for MCP projection', async () => {
@@ -426,13 +466,96 @@ describe('minecraft game adapter', () => {
 
     expect(byId['minecraft.come']?.risk).toBe('low')
     expect(byId['minecraft.give']?.risk).toBe('low')
-    expect(byId['minecraft.recipe']?.risk).toBe('low')
+    expect(byId['minecraft.look']?.risk).toBe('low')
+    expect(byId['minecraft.waypoint']?.risk).toBe('low')
     expect(byId['minecraft.collect']?.risk).toBe('medium')
     expect(byId['minecraft.craft']?.risk).toBe('medium')
     expect(byId['minecraft.attack']?.risk).toBe('medium')
-    expect(byId['minecraft.chest_put']?.cancellable).toBe(true)
+    expect(byId['minecraft.mine_at']?.risk).toBe('medium')
+    expect(byId['minecraft.chest']?.cancellable).toBe(true)
     expect(byId['minecraft.place']?.cancellable).toBe(false)
+    expect(byId['minecraft.recipe']).toBeUndefined()
+    expect(byId['minecraft.chest_put']).toBeUndefined()
     expect(capabilities.some(item => item.capabilityId === 'minecraft.attack_player')).toBe(false)
+  })
+  it('maps navigation look farm dig and surface capabilities', async () => {
+    const driver = createTaskDriver()
+    const adapter = new MinecraftGameAdapter({ driver })
+    const events = observe(adapter)
+
+    await adapter.execute(command('minecraft.look', 'look-1', { playerName: 'Steve' }))
+    await adapter.execute(command('minecraft.look', 'look-2', { target: '1,70,2' }))
+    await adapter.execute(command('minecraft.goto_block', 'gb-1', {
+      blockType: 'oak_log',
+      closeness: 2,
+      range: 48,
+    }))
+    await adapter.execute(command('minecraft.goto_entity', 'ge-1', {
+      entityType: 'cow',
+    }))
+    await adapter.execute(command('minecraft.move_away', 'ma-1', { distance: 12 }))
+    await adapter.execute(command('minecraft.dig_down', 'dd-1', { depth: 3 }))
+    await adapter.execute(command('minecraft.goto_surface', 'gs-1'))
+    await adapter.execute(command('minecraft.farm', 'farm-1', {
+      target: '4,64,5',
+      seedType: 'wheat_seeds',
+    }))
+    await adapter.execute(command('minecraft.chest', 'chest-take-1', {
+      action: 'take',
+      itemName: 'coal',
+      count: 2,
+    }))
+    await adapter.execute(command('minecraft.waypoint', 'wp-missing', {
+      action: 'goto',
+      name: 'nowhere',
+    }))
+
+    expect(driver.executeAction).toHaveBeenNthCalledWith(1, 'lookAt', { player_name: 'Steve' })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(2, 'lookAt', { x: 1, y: 70, z: 2 })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(3, 'goToNearestBlock', {
+      type: 'oak_log',
+      closeness: 2,
+      range: 48,
+    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(4, 'goToNearestEntity', {
+      type: 'cow',
+      closeness: 2,
+      range: 64,
+    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(5, 'moveAway', { distance: 12 })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(6, 'digDown', { depth: 3 })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(7, 'goToSurface', {})
+    expect(driver.executeAction).toHaveBeenNthCalledWith(8, 'tillAndSow', {
+      x: 4,
+      y: 64,
+      z: 5,
+      seed_type: 'wheat_seeds',
+    })
+    expect(driver.executeAction).toHaveBeenNthCalledWith(9, 'chest', {
+      action: 'take',
+      item_name: 'coal',
+      num: 2,
+    })
+    expect(events.filter(event => event.actionId === 'wp-missing' && event.state === 'failed')).toHaveLength(1)
+    expect(events.filter(event => event.state === 'succeeded')).toHaveLength(9)
+  })
+
+  it('rejects invalid look and chest inputs', async () => {
+    const driver = createTaskDriver()
+    const adapter = new MinecraftGameAdapter({ driver })
+    const events = observe(adapter)
+
+    await adapter.execute(command('minecraft.look', 'look-both', {
+      playerName: 'Steve',
+      target: '1,2,3',
+    }))
+    await adapter.execute(command('minecraft.look', 'look-none', {}))
+    await adapter.execute(command('minecraft.chest', 'chest-put-missing', {
+      action: 'put',
+    }))
+
+    expect(driver.executeAction).not.toHaveBeenCalled()
+    expect(events.filter(event => event.state === 'failed')).toHaveLength(3)
   })
 
   it('rejects invalid companion task inputs without calling TaskExecutor', async () => {

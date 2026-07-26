@@ -213,7 +213,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'putInChest',
-    description: 'Put the given item in the nearest chest.',
+    description: 'Put the given item in the nearest chest. Prefer the unified chest action when available.',
     execution: 'async',
     schema: z.object({
       item_name: z.string().describe('The name of the item to put in the chest.'),
@@ -226,7 +226,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'takeFromChest',
-    description: 'Take the given items from the nearest chest.',
+    description: 'Take the given items from the nearest chest. Prefer the unified chest action when available.',
     execution: 'async',
     schema: z.object({
       item_name: z.string().describe('The name of the item to take.'),
@@ -235,6 +235,33 @@ export const actionsList: Action[] = [
     perform: mineflayer => async (item_name: string, num: number) => {
       await takeFromChest(mineflayer, item_name, num)
       return `Took [${item_name}]x${num} from chest`
+    },
+  },
+  {
+    name: 'chest',
+    description: 'Nearest chest: action put|take|view. view lists contents only. put/take need item_name. Do NOT use activate/interact for chest inventory.',
+    execution: 'async',
+    schema: z.object({
+      action: z.enum(['put', 'take', 'view']).describe('put items in, take items out, or view contents.'),
+      item_name: z.string().optional().describe('Item id for put/take.'),
+      num: z.number().int().min(1).optional().describe('Count for put/take. Default 1.'),
+    }),
+    perform: mineflayer => async (action: 'put' | 'take' | 'view', item_name?: string, num?: number) => {
+      if (action === 'view') {
+        const ok = await skills.viewChest(mineflayer)
+        if (!ok)
+          throw new ActionError('TARGET_NOT_FOUND', 'Could not find or open a nearby chest')
+        return 'Viewed nearest chest'
+      }
+      if (!item_name?.trim())
+        throw new ActionError('UNKNOWN', `chest ${action} requires item_name`)
+      const count = num ?? 1
+      if (action === 'put') {
+        await putInChest(mineflayer, item_name, count)
+        return `Put [${item_name}]x${count} in chest`
+      }
+      await takeFromChest(mineflayer, item_name, count)
+      return `Took [${item_name}]x${count} from chest`
     },
   },
   {
@@ -252,7 +279,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'collectBlocks',
-    description: 'Automatically collect the nearest blocks of a given type.',
+    description: 'Find and collect nearby blocks of one type (search + dig + pickup). For a known coordinate use mineBlockAt. To only walk to a block without digging use goToNearestBlock.',
     execution: 'async',
     // NOTICE: detach auto-follow before mining. The idle auto-follow reflex drives the same
     // mineflayer pathfinder as digging; if left attached it periodically re-points the bot at the
@@ -273,7 +300,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'mineBlockAt',
-    description: 'Mine (break) a block at a specific position. Do NOT use this for regular resource collection. Use collectBlocks instead.',
+    description: 'Break one block at an exact x,y,z. Do NOT use for searching nearby resources — use collectBlocks. Do NOT use just to walk near a block — use goToNearestBlock.',
     execution: 'async',
     // NOTICE: detach auto-follow before mining (same reason as collectBlocks) so the follow reflex
     // cannot interrupt bot.dig mid-break.
@@ -307,13 +334,16 @@ export const actionsList: Action[] = [
   },
   {
     name: 'craftRecipe',
-    description: 'Craft an item. Automatically finds or places a crafting table if needed, and handles intermediate materials for basic items (planks, sticks). Use recipePlan first to check required materials for complex items.',
+    description: 'Craft or plan crafting. mode=plan only explains materials (no craft). mode=execute crafts (finds/places table as needed). Do not call a separate recipe tool.',
     execution: 'async',
     schema: z.object({
       recipe_name: z.string().describe('The name of the output item to craft.'),
-      num: z.number().int().describe('The number of times to execute the recipe (craft count, NOT output item count). E.g. crafting planks once yields 4 planks, so num=2 yields 8 planks.').min(1),
+      num: z.number().int().describe('Craft count (recipe runs), NOT always output item count. Ignored for mode=plan except as desired amount.').min(1).default(1),
+      mode: z.enum(['plan', 'execute']).default('execute').describe('plan = material plan only; execute = actually craft.'),
     }),
-    perform: mineflayer => async (recipe_name: string, num: number) => {
+    perform: mineflayer => async (recipe_name: string, num: number = 1, mode: 'plan' | 'execute' = 'execute') => {
+      if (mode === 'plan')
+        return pad(describeRecipePlan(mineflayer.bot, recipe_name, num))
       await skills.craftRecipe(mineflayer, recipe_name, num)
       return `Crafted [${recipe_name}] ${num} time(s)`
     },
@@ -342,8 +372,27 @@ export const actionsList: Action[] = [
     },
   },
   {
+    name: 'placeAt',
+    description: 'Place a single block/torch at x,y,z (omit coords = under feet). Not for multi-block builds. For farming dirt use farm/tillAndSow.',
+    execution: 'async',
+    schema: z.object({
+      type: z.string().describe('The block type to place.'),
+      x: z.number().optional().describe('Optional x. Omit with y/z to place at feet.'),
+      y: z.number().optional().describe('Optional y.'),
+      z: z.number().optional().describe('Optional z.'),
+    }),
+    perform: mineflayer => async (type: string, x?: number, y?: number, z?: number) => {
+      const feet = mineflayer.bot.entity.position
+      const px = x ?? feet.x
+      const py = y ?? feet.y
+      const pz = z ?? feet.z
+      await placeBlock(mineflayer, type, px, py, pz)
+      return `Placed [${type}] at (${Math.floor(px)}, ${Math.floor(py)}, ${Math.floor(pz)})`
+    },
+  },
+  {
     name: 'placeHere',
-    description: 'Place a given block in the current location. Do NOT use to build structures, only use for single blocks/torches.',
+    description: 'Alias of placeAt at the bot feet. Prefer placeAt.',
     execution: 'async',
     schema: z.object({
       type: z.string().describe('The block type to place.'),
@@ -356,7 +405,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'attack',
-    description: 'Attack and kill the nearest entity of a given type.',
+    description: 'Attack and kill the nearest entity of a given type. To only walk near a mob without fighting use goToNearestEntity. For players use goToPlayer/follow, not this.',
     execution: 'async',
     schema: z.object({
       type: z.string().describe('The type of entity to attack.'),
@@ -364,6 +413,148 @@ export const actionsList: Action[] = [
     perform: mineflayer => async (type: string) => {
       await skills.attackNearest(mineflayer, type, true)
       return `Attacked nearest [${type}]`
+    },
+  },
+  {
+    name: 'lookAt',
+    description: 'Look at a player by name OR at x,y,z. Provide exactly one target style.',
+    execution: 'async',
+    schema: z.object({
+      player_name: z.string().optional().describe('Player to look at.'),
+      x: z.number().optional(),
+      y: z.number().optional(),
+      z: z.number().optional(),
+    }),
+    perform: mineflayer => async (player_name?: string, x?: number, y?: number, z?: number) => {
+      if (player_name?.trim()) {
+        const entity = mineflayer.bot.players[player_name]?.entity
+        if (!entity)
+          throw new ActionError('TARGET_NOT_FOUND', `Could not find player ${player_name}`, { playerName: player_name })
+        await mineflayer.bot.lookAt(entity.position.offset(0, entity.height, 0))
+        return `Looked at player [${player_name}]`
+      }
+      if (x == null || y == null || z == null)
+        throw new ActionError('UNKNOWN', 'lookAt requires player_name or x,y,z')
+      await mineflayer.bot.lookAt(new Vec3(x, y, z))
+      return `Looked at (${x}, ${y}, ${z})`
+    },
+  },
+  {
+    name: 'goToNearestBlock',
+    description: 'Pathfind to the nearest block of a type without mining it. To collect/dig that type use collectBlocks. For a known coordinate use goToCoordinate.',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({
+      type: z.string().describe('Block type to find.'),
+      closeness: z.number().min(0).default(2).describe('Stop this many blocks away.'),
+      range: z.number().min(1).default(64).describe('Search radius.'),
+    }),
+    perform: mineflayer => async (type: string, closeness: number = 2, range: number = 64) => {
+      const block = await skills.goToNearestBlock(mineflayer, type, closeness, range)
+      return `Reached ${type} at (${block.position.x}, ${block.position.y}, ${block.position.z})`
+    },
+  },
+  {
+    name: 'goToNearestEntity',
+    description: 'Pathfind next to the nearest entity of a type without attacking. To fight use attack. For a player by name use goToPlayer.',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({
+      type: z.string().describe('Entity type, e.g. cow or zombie.'),
+      closeness: z.number().min(0).default(2),
+      range: z.number().min(1).default(64),
+    }),
+    perform: mineflayer => async (type: string, closeness: number = 2, range: number = 64) => {
+      const ok = await skills.goToNearestEntity(mineflayer, type, closeness, range)
+      if (!ok)
+        throw new ActionError('TARGET_NOT_FOUND', `Could not find or reach entity ${type}`, { type })
+      return `Reached nearest [${type}]`
+    },
+  },
+  {
+    name: 'moveAway',
+    description: 'Move roughly this many blocks away from the current spot. For a specific coordinate use goToCoordinate.',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({
+      distance: z.number().min(1).default(16).describe('Approximate distance to move away.'),
+    }),
+    perform: mineflayer => async (distance: number = 16) => {
+      const ok = await skills.moveAway(mineflayer, distance)
+      if (!ok)
+        throw new ActionError('UNKNOWN', 'Failed to move away')
+      return `Moved away by about ${distance} blocks`
+    },
+  },
+  {
+    name: 'digDown',
+    description: 'Dig straight down under the bot for depth blocks. For one known block use mineBlockAt. For gathering a resource type use collectBlocks.',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({
+      depth: z.number().int().min(1).max(64).default(1).describe('How many blocks down to dig.'),
+    }),
+    perform: mineflayer => async (depth: number = 1) => {
+      let dug = 0
+      for (let i = 0; i < depth; i++) {
+        const feet = mineflayer.bot.entity.position.floored()
+        const below = mineflayer.bot.blockAt(feet.offset(0, -1, 0))
+        if (!below || below.name === 'air' || below.name === 'bedrock' || below.name === 'void_air')
+          break
+        await breakBlockAt(mineflayer, below.position.x, below.position.y, below.position.z)
+        dug += 1
+      }
+      if (dug === 0)
+        throw new ActionError('UNKNOWN', 'Nothing to dig under the bot')
+      return `Dug down ${dug} block(s)`
+    },
+  },
+  {
+    name: 'goToSurface',
+    description: 'Pathfind up to open sky / surface at the current x,z. For an arbitrary coordinate use goToCoordinate.',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({}),
+    perform: mineflayer => async () => {
+      const pos = mineflayer.bot.entity.position.floored()
+      const x = pos.x
+      const z = pos.z
+      for (let y = Math.min(319, pos.y + 96); y >= -64; y--) {
+        const ground = mineflayer.bot.blockAt(new Vec3(x, y, z))
+        const above = mineflayer.bot.blockAt(new Vec3(x, y + 1, z))
+        if (
+          ground
+          && ground.boundingBox === 'block'
+          && above
+          && (above.name === 'air' || above.name === 'cave_air' || above.boundingBox === 'empty')
+        ) {
+          const result = await skills.goToPosition(mineflayer, x, y + 1, z, 1)
+          if (!result.ok)
+            throw new ActionError('UNKNOWN', result.message || 'Failed to reach surface')
+          return `Reached surface near (${x}, ${y + 1}, ${z})`
+        }
+      }
+      throw new ActionError('TARGET_NOT_FOUND', 'Could not find a surface column at current x,z')
+    },
+  },
+  {
+    name: 'tillAndSow',
+    description: 'Till dirt/grass at x,y,z and optionally plant seed_type. Not for placing torches/blocks (use placeAt) or collecting crops (use collectBlocks).',
+    execution: 'async',
+    followControl: 'detach',
+    schema: z.object({
+      x: z.number(),
+      y: z.number(),
+      z: z.number(),
+      seed_type: z.string().optional().describe('Optional seed item id, e.g. wheat_seeds.'),
+    }),
+    perform: mineflayer => async (x: number, y: number, z: number, seed_type?: string) => {
+      const ok = await skills.tillAndSow(mineflayer, x, y, z, seed_type ?? null)
+      if (!ok)
+        throw new ActionError('UNKNOWN', `Failed to till/sow at (${x}, ${y}, ${z})`)
+      return seed_type
+        ? `Tilled and planted ${seed_type} at (${x}, ${y}, ${z})`
+        : `Tilled at (${x}, ${y}, ${z})`
     },
   },
   {
@@ -406,7 +597,7 @@ export const actionsList: Action[] = [
   },
   {
     name: 'recipePlan',
-    description: 'Plan how to craft an item. Shows the full recipe tree, what resources you have, what you\'re missing, and whether you can craft it now. Use this BEFORE attempting to craft complex items to understand what you need.',
+    description: 'Plan how to craft an item without crafting. Prefer craftRecipe with mode=plan when using the companion craft capability.',
     execution: 'sync',
     schema: z.object({
       item_name: z.string().describe('The name of the item you want to craft (e.g., "diamond_pickaxe", "oak_planks").'),

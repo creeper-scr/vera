@@ -36,15 +36,3 @@ navbar:
 pages:
   characters:
     title: 角色
-blog:
-  title: 文章 & 開發日誌
-  subtitle: 和我們一起旅行！閱讀由開發團隊發布的最新進展
-  card:
-    post:
-      read-more:
-        title: 閱讀更多
-  no-posts: 此分類下沒有找到任何文章
-  categories:
-    all: 全部
-    devlog: 開發日誌
-    dreamlog: 夢境日誌

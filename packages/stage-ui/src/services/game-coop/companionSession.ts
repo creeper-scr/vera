@@ -40,6 +40,7 @@ export interface CompanionSession {
   getPhase: () => CompanionAgentPhase
   ingestVoiceTurn: (turn: VoiceTurn) => Promise<CompanionAgentTurnResult>
   ingestObservation: (observation: CompanionObservationInput) => Promise<CompanionAgentTurnResult | null>
+  rememberExternalAssistant: (text: string) => void
   cancel: CompanionAgentRuntime['cancel']
   /** Subscribe observeWorld on executionPort if present; auto-ingest into agent. */
   startWorldObservations: () => void
@@ -145,6 +146,11 @@ export function createCompanionSession(options: CompanionSessionOptions): Compan
     getPhase: () => agent.getPhase(),
     ingestVoiceTurn,
     ingestObservation,
+    rememberExternalAssistant: (text: string) => {
+      if (disposed)
+        return
+      agent.rememberExternalAssistant(options.sessionId, text)
+    },
     cancel: agent.cancel,
     startWorldObservations,
     stopWorldObservations,

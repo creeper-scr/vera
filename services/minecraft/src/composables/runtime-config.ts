@@ -144,7 +144,7 @@ export class MinecraftRuntimeConfigManager {
         host: resolveString('BOT_HOSTNAME', savedConfig.host, envConfig.BOT_HOSTNAME, localEnvConfig.BOT_HOSTNAME, 'localhost'),
         port: resolvePort('BOT_PORT', savedConfig.port, envConfig.BOT_PORT, localEnvConfig.BOT_PORT, 25565),
         username: resolveString('BOT_USERNAME', savedConfig.username, envConfig.BOT_USERNAME, localEnvConfig.BOT_USERNAME, 'vera-bot'),
-        version: resolveString('BOT_VERSION', undefined, envConfig.BOT_VERSION, localEnvConfig.BOT_VERSION, '1.20'),
+        version: resolveString('BOT_VERSION', undefined, envConfig.BOT_VERSION, localEnvConfig.BOT_VERSION, '1.21.1'),
         auth: (normalizeOptionalString(localEnvConfig.BOT_AUTH)
           ?? normalizeOptionalString(envConfig.BOT_AUTH)
           ?? normalizeOptionalString(process.env.BOT_AUTH)) as Config['bot']['auth'] | undefined,

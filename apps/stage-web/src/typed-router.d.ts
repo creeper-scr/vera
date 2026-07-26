@@ -188,13 +188,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/settings/vera-card/': RouteRecordInfo<
-      '/settings/vera-card/',
-      '/settings/vera-card',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/settings/characters/': RouteRecordInfo<
       '/settings/characters/',
       '/settings/characters',
@@ -685,6 +678,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/settings/vera-card/': RouteRecordInfo<
+      '/settings/vera-card/',
+      '/settings/vera-card',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/v2/': RouteRecordInfo<
       '/v2/',
       '/v2',
@@ -888,12 +888,6 @@ declare module 'vue-router/auto-routes' {
     '../../packages/stage-pages/src/pages/settings/index.vue': {
       routes:
         | '/settings/'
-      views:
-        | never
-    }
-    '../../packages/stage-pages/src/pages/settings/vera-card/index.vue': {
-      routes:
-        | '/settings/vera-card/'
       views:
         | never
     }
@@ -1314,6 +1308,12 @@ declare module 'vue-router/auto-routes' {
     '../../packages/stage-pages/src/pages/settings/system/general.vue': {
       routes:
         | '/settings/system/general'
+      views:
+        | never
+    }
+    '../../packages/stage-pages/src/pages/settings/vera-card/index.vue': {
+      routes:
+        | '/settings/vera-card/'
       views:
         | never
     }

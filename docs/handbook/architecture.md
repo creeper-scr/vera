@@ -16,7 +16,7 @@
 | `packages/i18n` | Translations. |
 | `packages/server-*` | Server schema, SDK, shared protocol (plus `server-runtime` above). |
 | `services/minecraft` | Mineflayer bot + game-coop adapter (`module:minecraft-bot`). |
-| `services/game-bridges` | Stardew / DST file bridges (`module:stardew-bot` / `module:dst-bot`). |
+| `services/game-bridges` | Stardew / DST file bridges (`module:stardew-bot` / `module:dst-bot`). Env: `VERA_URL` (not Minecraft’s `VERA_WS_BASEURL`). |
 
 **Residual / not release-maintained here**: `apps/stage-tamagotchi`, `apps/stage-pocket`, orphan auth-UI trees. Prefer `stage-web`. Auth redirects on `apps/server` use external `AUTH_UI_URL`.
 
@@ -31,8 +31,8 @@ Use `ChatOrchestratorSendOptions` for per-turn settings. Feed observations throu
 Full layering: [`game-companion.md`](./game-companion.md).
 
 - **Layer 1 (voice / chat media)**: realtime ASR/TTS (e.g. Doubao). Speaks only; does not call game tools.
-- **Layer 2 (decision)**: `CompanionAgentRuntime` / `GameActionRuntime` in `core-agent`, wired by `createCompanionSession` / `useCompanionSession` in `stage-ui`.
-- **Layer 3 (world)**: `GameExecutionPort` implementations (Minecraft adapter, server adapter, fakes in tests).
+- **Layer 2 (decision, product)**: `CompanionAgentRuntime` in `core-agent`, wired by `createCompanionSession` / `useCompanionSession` in `stage-ui`. Legacy single-action `GameActionRuntime` / `useGameActionRuntime` remains for demos/tests only — not the `stage-web` companion path.
+- **Layer 3 (world)**: `GameAdapter` implementations used as `GameExecutionPort` (Minecraft adapter in `services/minecraft`, remote proxy `ServerGameAdapter` over WS, fakes in tests). Destination must be `module:${adapterId}-bot` (e.g. `module:minecraft-bot`).
 
 `stage-web` owns the companion UI and attaches to remote adapters over `server-runtime` WS. Shared contracts stay in `game-coop-core` / `core-agent`, not in app-local types.
 

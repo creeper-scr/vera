@@ -18,6 +18,11 @@ export type { AgentLLMPort } from './contracts/llm-port'
 export type { AgentSessionPort } from './contracts/session-port'
 export type { AgentForegroundStreamPort } from './contracts/stream-port'
 export type {
+  VoiceSteerDirective,
+  VoiceSteerTurnResultInput,
+} from './contracts/voiceSteer'
+export { createVoiceSteerFromTurnResult } from './contracts/voiceSteer'
+export type {
   SpeechPlaybackResult,
   SpeechPlaybackTerminal,
   VoiceTurn,

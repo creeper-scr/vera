@@ -16,5 +16,5 @@ From repo root: `pnpm dev` / `pnpm build:web`.
 ## Notes
 
 - Shared stage UI and stores come from `@proj-vera/stage-ui`.
-- Experimental web console / Doubao voice paths live under `src/composables/webConsole.ts` and related pages — not a full Live2D companion stack.
-- User-facing docs: [VitePress manual](https://vera.moeru.ai/docs/).
+- Companion / Doubao voice product path: `src/pages/index.vue` → `@proj-vera/stage-ui` `useCompanionSession`. Layering: [`docs/handbook/game-companion.md`](../../docs/handbook/game-companion.md).
+- User-facing docs: local `pnpm dev:docs`; upstream publish [airi.moeru.ai/docs](https://airi.moeru.ai/docs/).

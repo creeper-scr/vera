@@ -10,11 +10,13 @@ Do **not** connect this bot to public servers you do not trust. The runtime can 
 
 ```bash
 pnpm i   # from repo root
-cp services/minecraft/.env services/minecraft/.env.local
+cp services/minecraft/.env.example services/minecraft/.env.local
 # edit .env.local
 pnpm -F @proj-vera/minecraft-bot dev
 # or: pnpm -F @proj-vera/minecraft-bot start
 ```
+
+For the full companion loop (web + WS hub + bot + Doubao relay): `pnpm dev:play` from repo root. See [`docs/handbook/game-companion.md`](../../docs/handbook/game-companion.md).
 
 ## Game-coop
 
@@ -22,10 +24,13 @@ pnpm -F @proj-vera/minecraft-bot dev
 |------|------|
 | `src/game-coop/minecraftGameAdapter.ts` | `GameAdapter` implementation |
 | `src/game-coop/minecraftGameCoopChannel.ts` | Channel / session glue |
+| `src/libs/mineflayer/connection-supervisor.ts` | Disconnect / reconnect + spawn watchdog |
 | `src/game-coop/*.test.ts` | Unit / integration / closed-loop e2e |
 
 Contracts: `@proj-vera/game-coop-core`. Session wiring on the stage side: [`docs/handbook/game-companion.md`](../../docs/handbook/game-companion.md).
 
-## Legacy paths
+## Runtime layout
 
-`src/cognitive/` and `src/voice-game/` still exist for older Mineflayer cognitive flows. New companion / voice→action work should go through `src/game-coop/` and the Layer 1–3 split in the handbook — do not extend the legacy path for new features unless migrating it.
+`src/cognitive/` still hosts Mineflayer plugins, `TaskExecutor` / `llm-actions`, and the glue that constructs `MinecraftGameAdapter` + channel. Companion contracts live under `src/game-coop/`.
+
+New world capabilities: bind in TaskExecutor / `llm-actions` first, then expose as a `MinecraftGameAdapter` capability. Do not add a parallel voice→action control plane outside game-coop.

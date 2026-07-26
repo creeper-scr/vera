@@ -36,15 +36,3 @@ navbar:
 pages:
   characters:
     title: 캐릭터
-blog:
-  title: Blog 및 개발 로그
-  subtitle: 저희 여정을 따라가시고 개발팀으로부터 최신 소식을 받아보세요.
-  card:
-    post:
-      read-more:
-        title: 더 보기
-  no-posts: 이 카테고리에 게시물이 없습니다.
-  categories:
-    all: 모두
-    devlog: 개발 로그
-    dreamlog: 드림 로그

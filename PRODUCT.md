@@ -14,7 +14,7 @@ Secondary audiences (contributors, streamers) exist around the open-source stack
 
 ## Product Purpose
 
-Deliver an AI agent that enters the player’s game world and acts with them — follow, mine, clear blocks, fish, and similar co-presence — so the world does not feel empty when friends are offline.
+Deliver an AI agent that enters the player’s game world and acts with them — follow, mine, clear blocks, and similar co-presence — so the world does not feel empty when friends are offline.
 
 Success today means a player can open Minecraft, attach the agent, and feel someone is there doing things beside them. Success later means the same relationship formed in-game can extend beyond a single title and, eventually, beyond the game session itself — without claiming that life-outside-game capabilities already ship.
 
@@ -41,7 +41,6 @@ Public product, companion, and stack identity: **Vera** (also **Project Vera**).
 - Follow the player.
 - Mine / dig on basic instruction.
 - Break / clear blocks in a directed area.
-- Fish alongside the player.
 - Conversational personality over voice or chat while acting in-world.
 
 **In progress:**
@@ -68,7 +67,7 @@ Public product, companion, and stack identity: **Vera** (also **Project Vera**).
   - “An AI companion that acts inside Minecraft.”
   - Vision line: “One Vera. Beyond the game.” / 「游戏，是你们相遇的地方。但不一定是陪伴结束的地方。」
 - Tone for the loneliness problem: restrained and empathetic first; product demo warm and light; vision clearly separated from current capability.
-- Repo/legal signals: open-source Vera / Project Vera (MIT; fork of Moeru Project AIRI); project states it has no official cryptocurrency or token — do not invent crypto/token claims. Do not present AIRI as the current product brand.
+- Repo/legal signals: open-source Vera / Project Vera (fork of Moeru Project AIRI); project states it has no official cryptocurrency or token — do not invent crypto/token claims. Do not present AIRI as the current product brand.
 - Do not invent testimonials, user counts, or capabilities beyond the confirmed list.
 
 ## Evidence on Hand
@@ -81,7 +80,7 @@ Public product, companion, and stack identity: **Vera** (also **Project Vera**).
 ## Product Principles
 
 1. **Presence over advice** — Prefer being in the world and doing something together over explaining the game from outside it.
-2. **Honest capability** — Show follow / mine / break / fish as real; never sell vision (life beyond game, autonomous mastery) as current product.
+2. **Honest capability** — Show follow / mine / break as real; never sell vision (life beyond game, autonomous mastery) as current product.
 3. **Companionship first** — Optimize for “someone is here with me,” not leaderboard performance or full automation.
 4. **Games as the door** — New worlds and deeper understanding expand from shared play; do not reverse into a generic life-assistant pitch that forgets the game wedge.
 5. **One continuous Vera** — Character, voice, and relationship continuity matter across sessions and, later, across surfaces; implementations may lag, but messaging should not fragment the companion into disposable tools.

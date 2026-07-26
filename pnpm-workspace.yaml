@@ -242,8 +242,8 @@ catalog:
   markdown-it-anchor: ^9.2.0
   mediabunny: ^1.40.1
   meta-png: ^1.0.6
-  minecraft-data: 3.102.3
-  mineflayer: ^4.33.0
+  minecraft-data: 3.111.0
+  mineflayer: ^4.37.1
   mineflayer-armor-manager: ^2.0.1
   mineflayer-auto-eat: ^5.0.3
   mineflayer-collectblock: ^1.6.0

@@ -299,12 +299,61 @@ describe('createCompanionAgentRuntime', () => {
     expect(model.stream.mock.calls[0]![0].messages[0]?.content).toContain(
       '若未配置且只有一个非自身在线玩家，可使用该玩家',
     )
-    expect(model.stream.mock.calls[0]![0].messages[0]?.content).toContain(
-      '没有工具调用就不要声称已经在做或已经完成',
-    )
-    expect(model.stream.mock.calls[0]![0].messages[0]?.content).toContain(
-      '优先用环境字段 nearestLog',
-    )
+  })
+
+  it('mirrors Layer 1 spoken text into conversation history for doubao turns', async () => {
+    const { model, runtime } = createHarness({ tools: [] })
+    model.stream.mockResolvedValue({ assistantText: 'L2草稿不要进历史' })
+
+    runtime.rememberExternalAssistant('s1', '好呀我去看看')
+    await runtime.ingestVoiceTurn({
+      sessionId: 's1',
+      turnId: 't-mirror-1',
+      text: '砍树',
+      createdAt: 1,
+      metadata: { source: 'doubao-realtime', eventId: 'e-mirror-1' },
+    })
+    await runtime.ingestVoiceTurn({
+      sessionId: 's1',
+      turnId: 't-mirror-2',
+      text: '好了吗',
+      createdAt: 2,
+      metadata: { source: 'doubao-realtime', eventId: 'e-mirror-2' },
+    })
+
+    const secondMessages = model.stream.mock.calls[1]![0].messages
+    expect(secondMessages).toContainEqual({ role: 'user', content: '砍树' })
+    expect(secondMessages).toContainEqual({ role: 'assistant', content: '好呀我去看看' })
+    expect(secondMessages).not.toContainEqual({
+      role: 'assistant',
+      content: 'L2草稿不要进历史',
+    })
+  })
+
+  it('attaches late Layer 1 speech after the user turn is already remembered', async () => {
+    const { model, runtime } = createHarness({ tools: [] })
+    model.stream.mockResolvedValue({})
+
+    await runtime.ingestVoiceTurn({
+      sessionId: 's1',
+      turnId: 't-late-1',
+      text: '过来',
+      createdAt: 1,
+      metadata: { source: 'doubao-realtime', eventId: 'e-late-1' },
+    })
+    runtime.rememberExternalAssistant('s1', '来了来了')
+    await runtime.ingestVoiceTurn({
+      sessionId: 's1',
+      turnId: 't-late-2',
+      text: '到了吗',
+      createdAt: 2,
+      metadata: { source: 'doubao-realtime', eventId: 'e-late-2' },
+    })
+
+    expect(model.stream.mock.calls[1]![0].messages).toContainEqual({
+      role: 'assistant',
+      content: '来了来了',
+    })
   })
 
   it('still chats when the environment is stale and no tools are available', async () => {

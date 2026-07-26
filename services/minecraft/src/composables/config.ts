@@ -89,7 +89,7 @@ const defaultConfig: Omit<Config, 'openai'> = {
     port: 25565,
     auth: undefined,
     password: '',
-    version: '1.20',
+    version: '1.21.1',
     masterUsername: undefined,
   },
   vera: {

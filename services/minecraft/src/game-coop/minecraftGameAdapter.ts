@@ -36,10 +36,17 @@ const capabilityIds = {
   clearFurnace: 'minecraft.clear_furnace',
   place: 'minecraft.place',
   attack: 'minecraft.attack',
-  recipe: 'minecraft.recipe',
-  chestPut: 'minecraft.chest_put',
-  chestTake: 'minecraft.chest_take',
+  chest: 'minecraft.chest',
   discard: 'minecraft.discard',
+  mineAt: 'minecraft.mine_at',
+  look: 'minecraft.look',
+  gotoBlock: 'minecraft.goto_block',
+  gotoEntity: 'minecraft.goto_entity',
+  moveAway: 'minecraft.move_away',
+  digDown: 'minecraft.dig_down',
+  gotoSurface: 'minecraft.goto_surface',
+  farm: 'minecraft.farm',
+  waypoint: 'minecraft.waypoint',
 } as const
 
 const emptyInputSchema = v.strictObject({})
@@ -182,7 +189,7 @@ const taskBindings: MinecraftTaskBinding[] = [
   taskCapability(
     {
       capabilityId: capabilityIds.come,
-      description: 'Walk once to a visible Minecraft player (does not keep following).',
+      description: 'Walk once to a visible Minecraft player (does not keep following). For mobs use goto_entity. To keep following use follow.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -217,7 +224,7 @@ const taskBindings: MinecraftTaskBinding[] = [
   taskCapability(
     {
       capabilityId: capabilityIds.collect,
-      description: 'Collect nearby Minecraft blocks of one type. For chopping trees prefer target "wood", "log", or "tree", or the exact id from environment.nearestLog / nearbyBlocks.',
+      description: 'Collect nearby blocks of one type (search+dig+pickup). For a known coordinate use mine_at. To only walk to a block without digging use goto_block.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -383,48 +390,27 @@ const taskBindings: MinecraftTaskBinding[] = [
   ),
   taskCapability(
     {
-      capabilityId: capabilityIds.recipe,
-      description: 'Plan crafting requirements for an item without crafting it.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          itemName: {
-            type: 'string',
-            minLength: 1,
-            description: 'Desired output item id, for example "stone_pickaxe".',
-          },
-          count: { type: 'integer', minimum: 1, default: 1 },
-        },
-        required: ['itemName'],
-        additionalProperties: false,
-      },
-      risk: 'low',
-      cancellable: false,
-    },
-    'recipePlan',
-    v.strictObject({
-      itemName: nonEmptyString,
-      count: v.optional(positiveInt, 1),
-    }),
-    output => ({ item_name: output.itemName, amount: output.count }),
-  ),
-  taskCapability(
-    {
       capabilityId: capabilityIds.craft,
-      description: 'Craft an item (places or finds a crafting table when needed).',
+      description: 'Craft an item or plan materials. mode=plan lists requirements without crafting; mode=execute crafts (finds/places table as needed). Do not use a separate recipe tool.',
       inputSchema: {
         type: 'object',
         properties: {
           itemName: {
             type: 'string',
             minLength: 1,
-            description: 'Output item id to craft.',
+            description: 'Output item id to craft or plan.',
           },
           count: {
             type: 'integer',
             minimum: 1,
             default: 1,
-            description: 'How many times to run the recipe (not always equal to output count).',
+            description: 'Recipe runs for execute, or desired amount for plan.',
+          },
+          mode: {
+            type: 'string',
+            enum: ['plan', 'execute'],
+            default: 'execute',
+            description: 'plan = material plan only; execute = craft.',
           },
         },
         required: ['itemName'],
@@ -437,8 +423,13 @@ const taskBindings: MinecraftTaskBinding[] = [
     v.strictObject({
       itemName: nonEmptyString,
       count: v.optional(positiveInt, 1),
+      mode: v.optional(v.picklist(['plan', 'execute'] as const), 'execute'),
     }),
-    output => ({ recipe_name: output.itemName, num: output.count }),
+    output => ({
+      recipe_name: output.itemName,
+      num: output.count,
+      mode: output.mode,
+    }),
   ),
   taskCapability(
     {
@@ -487,7 +478,7 @@ const taskBindings: MinecraftTaskBinding[] = [
   taskCapability(
     {
       capabilityId: capabilityIds.place,
-      description: 'Place a single block or torch at the bot feet. Not for multi-block builds.',
+      description: 'Place a single block/torch at optional x,y,z (omit target = under feet). Not for multi-block builds. For farming use farm.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -496,6 +487,10 @@ const taskBindings: MinecraftTaskBinding[] = [
             minLength: 1,
             description: 'Block id to place, for example "torch".',
           },
+          target: {
+            type: 'string',
+            description: 'Optional coordinate "x,y,z". Omit to place at feet.',
+          },
         },
         required: ['blockType'],
         additionalProperties: false,
@@ -503,14 +498,24 @@ const taskBindings: MinecraftTaskBinding[] = [
       risk: 'medium',
       cancellable: false,
     },
-    'placeHere',
-    v.strictObject({ blockType: nonEmptyString }),
-    output => ({ type: output.blockType }),
+    'placeAt',
+    v.strictObject({
+      blockType: nonEmptyString,
+      target: v.optional(nonEmptyString),
+    }),
+    (output) => {
+      if (output.target == null || String(output.target).trim() === '')
+        return { type: output.blockType }
+      const coords = parseCoordinate(String(output.target))
+      if (coords == null)
+        return null
+      return { type: output.blockType, ...coords }
+    },
   ),
   taskCapability(
     {
       capabilityId: capabilityIds.attack,
-      description: 'Attack and try to kill the nearest entity of one mob type.',
+      description: 'Attack and try to kill the nearest entity of one mob type. To only approach a mob use goto_entity. For players use come/follow.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -532,49 +537,46 @@ const taskBindings: MinecraftTaskBinding[] = [
   ),
   taskCapability(
     {
-      capabilityId: capabilityIds.chestPut,
-      description: 'Put items into the nearest chest.',
+      capabilityId: capabilityIds.chest,
+      description: 'Nearest chest: action put|take|view. view lists contents. put/take need itemName. Do not use interact for chest inventory.',
       inputSchema: {
         type: 'object',
         properties: {
-          itemName: { type: 'string', minLength: 1 },
+          action: {
+            type: 'string',
+            enum: ['put', 'take', 'view'],
+            description: 'put items in, take items out, or view contents.',
+          },
+          itemName: {
+            type: 'string',
+            minLength: 1,
+            description: 'Required for put/take.',
+          },
           count: { type: 'integer', minimum: 1, default: 1 },
         },
-        required: ['itemName'],
+        required: ['action'],
         additionalProperties: false,
       },
       risk: 'medium',
       cancellable: true,
     },
-    'putInChest',
+    'chest',
     v.strictObject({
-      itemName: nonEmptyString,
+      action: v.picklist(['put', 'take', 'view'] as const),
+      itemName: v.optional(nonEmptyString),
       count: v.optional(positiveInt, 1),
     }),
-    output => ({ item_name: output.itemName, num: output.count }),
-  ),
-  taskCapability(
-    {
-      capabilityId: capabilityIds.chestTake,
-      description: 'Take items from the nearest chest.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          itemName: { type: 'string', minLength: 1 },
-          count: { type: 'integer', minimum: 1, default: 1 },
-        },
-        required: ['itemName'],
-        additionalProperties: false,
-      },
-      risk: 'medium',
-      cancellable: true,
+    (output) => {
+      if (output.action === 'view')
+        return { action: 'view' }
+      if (output.itemName == null || String(output.itemName).trim() === '')
+        return null
+      return {
+        action: output.action,
+        item_name: output.itemName,
+        num: output.count,
+      }
     },
-    'takeFromChest',
-    v.strictObject({
-      itemName: nonEmptyString,
-      count: v.optional(positiveInt, 1),
-    }),
-    output => ({ item_name: output.itemName, num: output.count }),
   ),
   taskCapability(
     {
@@ -599,12 +601,256 @@ const taskBindings: MinecraftTaskBinding[] = [
     }),
     output => ({ item_name: output.itemName, num: output.count }),
   ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.mineAt,
+      description: 'Break one block at exact coordinates. For searching nearby resources use collect. To only walk to a block type use goto_block.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          target: { type: 'string', description: 'Coordinate "x,y,z".' },
+          expectedBlockType: {
+            type: 'string',
+            description: 'Optional expected block id; fails on mismatch.',
+          },
+        },
+        required: ['target'],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      cancellable: true,
+    },
+    'mineBlockAt',
+    v.strictObject({
+      target: nonEmptyString,
+      expectedBlockType: v.optional(nonEmptyString),
+    }),
+    (output) => {
+      const coords = parseCoordinate(String(output.target))
+      if (coords == null)
+        return null
+      return {
+        ...coords,
+        ...(output.expectedBlockType != null
+          ? { expected_block_type: output.expectedBlockType }
+          : {}),
+      }
+    },
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.look,
+      description: 'Look at a player by name OR at coordinates. Provide playerName or target, not both.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          playerName: { type: 'string', minLength: 1 },
+          target: { type: 'string', description: 'Coordinate "x,y,z".' },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+      risk: 'low',
+      cancellable: false,
+    },
+    'lookAt',
+    v.strictObject({
+      playerName: v.optional(nonEmptyString),
+      target: v.optional(nonEmptyString),
+    }),
+    (output) => {
+      const hasPlayer = output.playerName != null && String(output.playerName).trim() !== ''
+      const hasTarget = output.target != null && String(output.target).trim() !== ''
+      if (hasPlayer === hasTarget)
+        return null
+      if (hasPlayer)
+        return { player_name: output.playerName }
+      const coords = parseCoordinate(String(output.target))
+      if (coords == null)
+        return null
+      return coords
+    },
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.gotoBlock,
+      description: 'Walk to the nearest block of a type without mining. To dig/collect that type use collect.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          blockType: { type: 'string', minLength: 1 },
+          closeness: { type: 'number', minimum: 0, default: 2 },
+          range: { type: 'number', minimum: 1, default: 64 },
+        },
+        required: ['blockType'],
+        additionalProperties: false,
+      },
+      risk: 'low',
+      cancellable: true,
+    },
+    'goToNearestBlock',
+    v.strictObject({
+      blockType: nonEmptyString,
+      closeness: v.optional(v.pipe(v.number(), v.minValue(0)), 2),
+      range: v.optional(v.pipe(v.number(), v.minValue(1)), 64),
+    }),
+    output => ({
+      type: output.blockType,
+      closeness: output.closeness,
+      range: output.range,
+    }),
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.gotoEntity,
+      description: 'Walk next to the nearest entity of a type without attacking. To fight use attack. For a named player use come.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entityType: { type: 'string', minLength: 1 },
+          closeness: { type: 'number', minimum: 0, default: 2 },
+          range: { type: 'number', minimum: 1, default: 64 },
+        },
+        required: ['entityType'],
+        additionalProperties: false,
+      },
+      risk: 'low',
+      cancellable: true,
+    },
+    'goToNearestEntity',
+    v.strictObject({
+      entityType: nonEmptyString,
+      closeness: v.optional(v.pipe(v.number(), v.minValue(0)), 2),
+      range: v.optional(v.pipe(v.number(), v.minValue(1)), 64),
+    }),
+    output => ({
+      type: output.entityType,
+      closeness: output.closeness,
+      range: output.range,
+    }),
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.moveAway,
+      description: 'Move roughly away from the current spot. For a specific coordinate use move.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          distance: { type: 'number', minimum: 1, default: 16 },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+      risk: 'low',
+      cancellable: true,
+    },
+    'moveAway',
+    v.strictObject({
+      distance: v.optional(v.pipe(v.number(), v.minValue(1)), 16),
+    }),
+    output => ({ distance: output.distance }),
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.digDown,
+      description: 'Dig straight down under the bot. For one known block use mine_at. For gathering a resource type use collect.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          depth: { type: 'integer', minimum: 1, maximum: 64, default: 1 },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      cancellable: true,
+    },
+    'digDown',
+    v.strictObject({
+      depth: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(64)), 1),
+    }),
+    output => ({ depth: output.depth }),
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.gotoSurface,
+      description: 'Pathfind to the surface above the current x,z. For arbitrary coordinates use move.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+      risk: 'low',
+      cancellable: true,
+    },
+    'goToSurface',
+    emptyInputSchema,
+    () => ({}),
+  ),
+  taskCapability(
+    {
+      capabilityId: capabilityIds.farm,
+      description: 'Till dirt/grass at a coordinate and optionally plant seeds. Not for placing torches (use place) or collecting crops (use collect).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          target: { type: 'string', description: 'Coordinate "x,y,z" of the dirt/grass block.' },
+          seedType: {
+            type: 'string',
+            description: 'Optional seed item id, e.g. wheat_seeds.',
+          },
+        },
+        required: ['target'],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      cancellable: true,
+    },
+    'tillAndSow',
+    v.strictObject({
+      target: nonEmptyString,
+      seedType: v.optional(nonEmptyString),
+    }),
+    (output) => {
+      const coords = parseCoordinate(String(output.target))
+      if (coords == null)
+        return null
+      return {
+        ...coords,
+        ...(output.seedType != null ? { seed_type: output.seedType } : {}),
+      }
+    },
+  ),
 ]
+
+const waypointCapability: GameCapability = {
+  capabilityId: capabilityIds.waypoint,
+  description: 'Named landmarks for this session. action=set stores current position as name; action=goto pathfinds to a saved name. For raw coordinates use move.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      action: {
+        type: 'string',
+        enum: ['set', 'goto'],
+      },
+      name: {
+        type: 'string',
+        minLength: 1,
+        description: 'Waypoint name.',
+      },
+    },
+    required: ['action', 'name'],
+    additionalProperties: false,
+  },
+  risk: 'low',
+  cancellable: true,
+}
 
 const taskBindingsById = new Map(
   taskBindings.map(binding => [binding.capability.capabilityId, binding]),
 )
-const taskCapabilities = taskBindings.map(binding => binding.capability)
+const taskCapabilities = [...taskBindings.map(binding => binding.capability), waypointCapability]
 
 /** Game-specific state exposed through status and lifecycle snapshots. */
 export interface MinecraftSnapshot extends Record<string, JsonValue> {
@@ -780,6 +1026,8 @@ export class MinecraftGameAdapter implements GameAdapter {
   private readonly now: () => number
   private activeFollow: ActiveFollow | null = null
   private activeTask: ActiveTask | null = null
+  /** Session-scoped named landmarks for minecraft.waypoint. */
+  private readonly waypointsBySession = new Map<string, Map<string, { x: number, y: number, z: number }>>()
   private unsubscribeEnvironment: Unsubscribe | null = null
   private worldSequence = 0
   private environmentRevision = 0
@@ -854,6 +1102,10 @@ export class MinecraftGameAdapter implements GameAdapter {
     }
     if (command.capabilityId === capabilityIds.stop) {
       await this.executeStop(command)
+      return
+    }
+    if (command.capabilityId === capabilityIds.waypoint) {
+      await this.executeWaypoint(command)
       return
     }
 
@@ -1083,6 +1335,71 @@ export class MinecraftGameAdapter implements GameAdapter {
         this.activeTask = null
       this.emitFailure(command, error, `Minecraft action "${tool}" failed`)
     }
+  }
+
+  private async executeWaypoint(command: GameCommand): Promise<void> {
+    const parsed = v.safeParse(
+      v.strictObject({
+        action: v.picklist(['set', 'goto'] as const),
+        name: nonEmptyString,
+      }),
+      command.input,
+    )
+    if (!parsed.success) {
+      this.emitInvalidInput(command)
+      return
+    }
+
+    const { action, name } = parsed.output
+    const sessionWaypoints = this.waypointsBySession.get(command.sessionId)
+      ?? new Map<string, { x: number, y: number, z: number }>()
+
+    if (action === 'set') {
+      const snapshot = this.options.driver.getSnapshot()
+      const position = snapshot.position
+      if (position == null) {
+        this.emit({
+          ...this.eventBase(command),
+          state: 'failed',
+          error: 'Cannot set waypoint without a known bot position',
+        })
+        return
+      }
+      sessionWaypoints.set(name, {
+        x: position.x,
+        y: position.y,
+        z: position.z,
+      })
+      this.waypointsBySession.set(command.sessionId, sessionWaypoints)
+      this.emit({ ...this.eventBase(command), state: 'running' })
+      this.emit({
+        ...this.eventBase(command),
+        state: 'succeeded',
+        result: {
+          action: 'set',
+          name,
+          position: { x: position.x, y: position.y, z: position.z },
+        },
+      })
+      return
+    }
+
+    const saved = sessionWaypoints.get(name)
+    if (saved == null) {
+      this.emit({
+        ...this.eventBase(command),
+        state: 'failed',
+        error: `Unknown waypoint "${name}"`,
+      })
+      return
+    }
+
+    await this.executeTask(
+      command,
+      'goToCoordinate',
+      { ...saved, closeness: 1 },
+      true,
+    )
   }
 
   private async executeStop(command: GameCommand): Promise<void> {

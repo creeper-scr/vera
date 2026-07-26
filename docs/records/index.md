@@ -6,7 +6,6 @@ Dated design / plan notes. **Not** the live contract — prefer [`docs/handbook/
 
 | Doc | Notes |
 |-----|--------|
-| [`plans/2026-07-25-game-companion-d0-d1-contract-freeze.md`](./plans/2026-07-25-game-companion-d0-d1-contract-freeze.md) | D0/D1 contract freeze |
 | [`handbook/game-companion.md`](../handbook/game-companion.md) | Stable layering (voice / decision / adapter) |
 
 ## Historical / other plans

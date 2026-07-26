@@ -36,15 +36,3 @@ navbar:
 pages:
   characters:
     title: Персонажи
-blog:
-  title: Блог & ДевЛоги
-  subtitle: Следи за новостями и получай последние обновления от команды разработки
-  card:
-    post:
-      read-more:
-        title: Читать дальше
-  no-posts: Посты не найдены в этой категории.
-  categories:
-    all: Всё
-    devlog: ДевЛог
-    dreamlog: Хроники

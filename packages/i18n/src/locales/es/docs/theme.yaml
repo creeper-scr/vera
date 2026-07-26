@@ -36,15 +36,3 @@ navbar:
 pages:
   characters:
     title: Personajes
-blog:
-  title: Blog y DevLogs
-  subtitle: Sigue nuestro viaje y obtén las últimas actualizaciones del equipo de desarrollo.
-  card:
-    post:
-      read-more:
-        title: Leer más
-  no-posts: No se encontraron publicaciones en esta categoría.
-  categories:
-    all: Todo
-    devlog: DevLog
-    dreamlog: DreamLog

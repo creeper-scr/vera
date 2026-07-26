@@ -2,15 +2,15 @@
 
 Game-neutral contracts and adapter registry for cooperative game agents.
 
-## Use
+## Contracts
 
-Implement `GameAdapter` in a game service, register it with
-`createGameAdapterRegistry()`, then give the returned `GameExecutionPort` to
-the agent core.
+Implement `GameAdapter` in a game service. Capabilities, environment, execute / observe / cancel, and action lifecycle IDs live here — not in Vue, Electron, provider, or LLM packages.
 
-Adapters declare capabilities per session. The registry aggregates that
-catalog, rejects capability ID collisions, routes commands and cancellation,
-and forwards only valid action lifecycle events.
+`GameExecutionPort` extends `GameAdapter`. In-process multi-adapter hosts may use `createGameAdapterRegistry()` to aggregate catalogs, reject capability ID collisions, and route commands / cancellation. Registry usage today is mainly tests and in-process hosts.
+
+## Product path in this repo
+
+Browser companion does **not** register adapters in-process. Service processes hold the real adapter; the web stage attaches via `ServerGameAdapter` + `server-runtime` WS (`module:${adapterId}-bot`), then `createGameMcpClient` / `CompanionAgentRuntime`. See [`docs/handbook/game-companion.md`](../../docs/handbook/game-companion.md).
 
 ## Use this package when
 
@@ -22,4 +22,4 @@ and forwards only valid action lifecycle events.
 
 - Vue, Electron, provider, LLM, STT, or TTS integration.
 - Game-specific action IDs or input schemas.
-- Transport wiring. Eventa and server-channel bridges belong to Integration.
+- Transport wiring. Server-channel / file-bridge transport belongs to `stage-ui` / `services/*`.

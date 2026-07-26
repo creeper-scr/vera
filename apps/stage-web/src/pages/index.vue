@@ -140,8 +140,10 @@ const realtimeVoice = useDoubaoRealtimeVoice({
   },
   onAssistantText(text) {
     const cleaned = stripCompanionDisplayMarkers(text)
-    if (cleaned)
+    if (cleaned) {
       feed.value.push({ role: 'assistant', text: cleaned, at: Date.now() })
+      companion.rememberSpokenUtterance(cleaned)
+    }
     voicePhase.value = 'speaking'
   },
   onError(message) {

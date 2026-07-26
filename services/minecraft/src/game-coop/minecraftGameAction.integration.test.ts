@@ -232,6 +232,107 @@ describe('minecraft game action integration', () => {
       expect(executeAction).toHaveBeenCalledWith('craftRecipe', {
         recipe_name: 'stick',
         num: 2,
+        mode: 'execute',
+      })
+    }
+    finally {
+      runtime.dispose()
+      await mcp.dispose()
+    }
+  })
+
+  it('companion MCP path exposes expanded tools and executes mine_at chest goto_block across turns', async () => {
+    const executeAction = vi.fn(async (tool: string, params: Record<string, unknown>) => ({
+      tool,
+      params,
+      ok: true,
+    }))
+    const adapter = new MinecraftGameAdapter({
+      driver: createTaskDriver(executeAction),
+      now: () => 1_000,
+    })
+    let actionSequence = 0
+    const mcp = createGameMcpClient({
+      executionPort: adapter,
+      createActionId: () => `expand-action-${++actionSequence}`,
+      now: () => 1_000,
+      allowedRisks: ['low', 'medium'],
+    })
+    const modelRequests: GameActionModelRequest[] = []
+    let turnIndex = 0
+    const runtime = createGameActionRuntime({
+      mcp,
+      now: () => 1_000,
+      model: {
+        async stream(request) {
+          modelRequests.push(request)
+          const mineAt = request.tools.find(tool => tool.function.name === 'minecraft_mine_at')
+          const chest = request.tools.find(tool => tool.function.name === 'minecraft_chest')
+          const gotoBlock = request.tools.find(tool => tool.function.name === 'minecraft_goto_block')
+          if (mineAt == null || chest == null || gotoBlock == null)
+            throw new Error('Expected expanded companion tools')
+
+          if (turnIndex === 0) {
+            await mineAt.execute(
+              { target: '3,64,4', expectedBlockType: 'oak_log' },
+              { messages: request.messages, toolCallId: 'mine-1' },
+            )
+          }
+          else if (turnIndex === 1) {
+            await chest.execute(
+              { action: 'view' },
+              { messages: request.messages, toolCallId: 'chest-1' },
+            )
+          }
+          else {
+            await gotoBlock.execute(
+              { blockType: 'crafting_table', closeness: 2 },
+              { messages: request.messages, toolCallId: 'goto-1' },
+            )
+          }
+          turnIndex += 1
+        },
+      },
+    })
+
+    try {
+      await expect(runtime.ingest({
+        sessionId: 'companion-session',
+        turnId: 'expand-1',
+        text: '挖那棵树旁边的方块',
+      })).resolves.toMatchObject({ status: 'executed' })
+      await expect(runtime.ingest({
+        sessionId: 'companion-session',
+        turnId: 'expand-2',
+        text: '看看箱子',
+      })).resolves.toMatchObject({ status: 'executed' })
+      await expect(runtime.ingest({
+        sessionId: 'companion-session',
+        turnId: 'expand-3',
+        text: '走到工作台',
+      })).resolves.toMatchObject({ status: 'executed' })
+
+      const toolNames = modelRequests[0].tools.map(tool => tool.function.name)
+      expect(toolNames).toContain('minecraft_mine_at')
+      expect(toolNames).toContain('minecraft_chest')
+      expect(toolNames).toContain('minecraft_goto_block')
+      expect(toolNames).toContain('minecraft_waypoint')
+      expect(toolNames).toContain('minecraft_farm')
+      expect(toolNames).not.toContain('minecraft_recipe')
+      expect(toolNames).not.toContain('minecraft_chest_put')
+      expect(toolNames).not.toContain('minecraft_status')
+
+      expect(executeAction).toHaveBeenCalledWith('mineBlockAt', {
+        x: 3,
+        y: 64,
+        z: 4,
+        expected_block_type: 'oak_log',
+      })
+      expect(executeAction).toHaveBeenCalledWith('chest', { action: 'view' })
+      expect(executeAction).toHaveBeenCalledWith('goToNearestBlock', {
+        type: 'crafting_table',
+        closeness: 2,
+        range: 64,
       })
     }
     finally {

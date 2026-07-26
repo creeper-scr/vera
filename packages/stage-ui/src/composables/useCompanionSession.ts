@@ -2,6 +2,7 @@ import type {
   CompanionAgentPhase,
   CompanionAgentTurnResult,
   CompanionObservationInput,
+  VoiceSteerDirective,
   VoiceTurn,
 } from '@proj-vera/core-agent'
 import type { GameExecutionPort } from '@proj-vera/game-coop-core'
@@ -11,11 +12,13 @@ import type { CompanionSession } from '../services/game-coop/companionSession'
 import type { GameVoiceActionHistoryEntry } from '../services/game-coop/gameVoiceSystemPrompt'
 
 import { errorMessageFrom } from '@moeru/std'
+import { createVoiceSteerFromTurnResult } from '@proj-vera/core-agent'
 import { WebSocketEventSource } from '@proj-vera/server-sdk'
 import { isStageTamagotchi } from '@proj-vera/stage-shared'
 import { onUnmounted, readonly, ref, shallowRef, toValue, watch } from 'vue'
 
 import { readPlayLlmCredentials } from '../libs/play-env-credentials'
+import { buildLayer2SystemPrompt } from '../services/game-coop/companionPersonaContract'
 import { createCompanionSession } from '../services/game-coop/companionSession'
 import {
   createGameVoiceSystemPrompt,
@@ -41,6 +44,11 @@ function resolveCompanionCharacterPrompt(base: string): string {
   if (!readPlayLlmCredentials())
     return base
   return `${base}\n\n${PLAY_NO_STAGE_MARKERS}`
+}
+
+/** Full Layer 2 system prompt from shared persona contract + play markers. */
+function resolveLayer2SystemPrompt(base: string): string {
+  return buildLayer2SystemPrompt(resolveCompanionCharacterPrompt(base))
 }
 
 export interface UseCompanionSessionOptions {
@@ -71,7 +79,7 @@ export interface UseCompanionSessionOptions {
  * VoiceTurn / observation → createCompanionSession → generic Game MCP → ServerGameAdapter.
  *
  * Layer 1 voice context is built from the same MCP environment/tools Layer 2
- * reads, plus recent Layer 2 decision outcomes. No parallel observation bus.
+ * reads, plus recent Layer 2 decision outcomes and hybrid VoiceSteer.
  */
 export function useCompanionSession(options: UseCompanionSessionOptions) {
   const veraCard = useVeraCardStore()
@@ -84,6 +92,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
   const toolNames = ref<string[]>([])
   const worldActive = ref(false)
   const actionHistory: GameVoiceActionHistoryEntry[] = []
+  let pendingSteer: VoiceSteerDirective | null = null
   const contextControllers = new Set<AbortController>()
 
   const channel = useGameCoopServerChannel()
@@ -110,7 +119,19 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
   let session: CompanionSession = createSession(toValue(options.sessionId), executionPort.value)
 
   /**
-   * Records Layer 2 decisions for Layer 1 voice prompt context.
+   * Formats one tool step into companion-facing history detail.
+   */
+  function formatToolStepDetail(step: CompanionAgentTurnResult['toolSteps'][number]): string {
+    const args = Object.keys(step.arguments).length > 0
+      ? `(${Object.entries(step.arguments).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(', ')})`
+      : ''
+    if (step.ok)
+      return `${step.name}${args}`
+    return `${step.name}${args}：${step.error ?? '失败'}`
+  }
+
+  /**
+   * Records Layer 2 decisions for Layer 1 voice prompt context + hybrid steer.
    */
   function rememberDecision(result: CompanionAgentTurnResult, turn: VoiceTurn) {
     // Synthetic observation turns are Layer 2 policy inputs, not player speech.
@@ -128,17 +149,15 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
         status: failed ? 'failed' : 'executed',
         detail: toolSteps.map(formatToolStepDetail).join('；'),
       })
-      return
     }
-    if (result.status === 'completed') {
+    else if (result.status === 'completed') {
       rememberGameVoiceAction(actionHistory, {
         turnText: turn.text,
         toolName: '',
         status: 'no-action',
       })
-      return
     }
-    if (result.status === 'failed') {
+    else if (result.status === 'failed') {
       rememberGameVoiceAction(actionHistory, {
         turnText: turn.text,
         toolName: names[0] ?? '',
@@ -146,18 +165,14 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
         detail: result.reason,
       })
     }
-  }
 
-  /**
-   * Formats one tool step into companion-facing history detail.
-   */
-  function formatToolStepDetail(step: CompanionAgentTurnResult['toolSteps'][number]): string {
-    const args = Object.keys(step.arguments).length > 0
-      ? `(${Object.entries(step.arguments).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(', ')})`
-      : ''
-    if (step.ok)
-      return `${step.name}${args}`
-    return `${step.name}${args}：${step.error ?? '失败'}`
+    if (
+      result.status === 'completed'
+      || result.status === 'failed'
+      || result.status === 'cancelled'
+    ) {
+      pendingSteer = createVoiceSteerFromTurnResult(turn.turnId, result, formatToolStepDetail)
+    }
   }
 
   /**
@@ -167,7 +182,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
     return createCompanionSession({
       executionPort: port,
       sessionId,
-      getSystemPrompt: () => resolveCompanionCharacterPrompt(veraCard.systemPrompt),
+      getSystemPrompt: () => resolveLayer2SystemPrompt(veraCard.systemPrompt),
       maxSteps: 6,
       // Cooperative Minecraft tools (collect/craft/attack/chest) are `medium`.
       // Keep `high` closed until GamePermissionPolicy / UI confirmation exists.
@@ -205,6 +220,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
     const nextExecutionPort = createExecutionPort(adapterId)
     executionPort.value = nextExecutionPort
     session = createSession(sessionId, nextExecutionPort)
+    pendingSteer = null
     await previous.dispose()
     if (shouldObserve)
       session.startWorldObservations()
@@ -259,6 +275,13 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
   }
 
   /**
+   * Mirrors Layer 1 spoken dialogue into Layer 2 conversation history.
+   */
+  function rememberSpokenUtterance(text: string) {
+    session.rememberExternalAssistant(text)
+  }
+
+  /**
    * Cancels the in-flight turn for the active session.
    */
   async function cancelTurn(turnId: string, reason?: string) {
@@ -289,7 +312,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
   }
 
   /**
-   * Layer 1 prompt: same MCP environment/tools Layer 2 uses + recent L2 outcomes.
+   * Layer 1 prompt: same MCP environment/tools Layer 2 uses + recent L2 outcomes + steer.
    */
   async function getSystemPrompt() {
     const controller = new AbortController()
@@ -307,6 +330,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
         tools,
         [...actionHistory],
         resolveCompanionCharacterPrompt(veraCard.systemPrompt),
+        pendingSteer,
       )
     }
     catch {
@@ -326,6 +350,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
       controller.abort()
     contextControllers.clear()
     actionHistory.length = 0
+    pendingSteer = null
     await session.dispose()
   }
 
@@ -342,6 +367,7 @@ export function useCompanionSession(options: UseCompanionSessionOptions) {
     executionPort: readonly(executionPort),
     ingestVoiceTurn,
     ingestObservation,
+    rememberSpokenUtterance,
     cancelTurn,
     startWorldObservations,
     stopWorldObservations,

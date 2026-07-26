@@ -289,6 +289,7 @@ describe('minecraft closed loop E2E', () => {
       expect(executeAction).toHaveBeenCalledWith('craftRecipe', {
         recipe_name: 'stick',
         num: 1,
+        mode: 'execute',
       })
 
       const commands = bus.stageSent.flatMap(event =>
@@ -401,6 +402,143 @@ describe('minecraft closed loop E2E', () => {
         capabilityId: 'minecraft.come',
         input: { playerName: 'Steve', closeness: 3 },
       })
+    }
+    finally {
+      runtime.dispose()
+      await mcp.dispose()
+      await bus.flush()
+      gameChannel.destroy()
+    }
+  })
+
+  it('companion path exposes expanded tools and routes waypoint then mine_at over game:coop', async () => {
+    const bus = createGameCoopBus()
+    const executeAction = vi.fn(async (tool: string, params: Record<string, unknown>) => ({
+      tool,
+      params,
+      ok: true,
+    }))
+    const driver: MinecraftGameDriver = {
+      getSnapshot: vi.fn(() => snapshot),
+      getEnvironment: vi.fn(() => environment),
+      follow: vi.fn(),
+      stopFollow: vi.fn(),
+      executeAction,
+      stopAction: vi.fn(async () => {}),
+    }
+    const gameAdapter = new MinecraftGameAdapter({ driver, now: () => 2_000 })
+    const gameChannel = new MinecraftGameCoopChannel({
+      client: bus.minecraftClient,
+      adapter: gameAdapter,
+    })
+    gameChannel.init()
+
+    const executionPort = new ServerGameAdapter({
+      channel: bus.stageChannel,
+      adapterId: 'minecraft',
+      destination: 'module:minecraft-bot',
+      replyTo: WebSocketEventSource.StageTamagotchi,
+      requestTimeoutMs: 500,
+      actionAckTimeoutMs: 500,
+      actionTerminalTimeoutMs: 500,
+    })
+    let actionSequence = 0
+    const mcp = createGameMcpClient({
+      executionPort,
+      createActionId: () => `expand-e2e-${++actionSequence}`,
+      now: () => 2_000,
+      allowedRisks: ['low', 'medium'],
+    })
+    const modelRequests: GameActionModelRequest[] = []
+    let turnIndex = 0
+    const runtime = createGameActionRuntime({
+      mcp,
+      now: () => 2_000,
+      model: {
+        async stream(request) {
+          modelRequests.push(request)
+          const toolNames = request.tools.map(tool => tool.function.name)
+          expect(toolNames).toContain('minecraft_mine_at')
+          expect(toolNames).toContain('minecraft_chest')
+          expect(toolNames).toContain('minecraft_goto_block')
+          expect(toolNames).toContain('minecraft_waypoint')
+          expect(toolNames).toContain('minecraft_farm')
+          expect(toolNames).not.toContain('minecraft_recipe')
+          expect(toolNames).not.toContain('minecraft_chest_put')
+
+          const waypoint = request.tools.find(tool => tool.function.name === 'minecraft_waypoint')
+          const mineAt = request.tools.find(tool => tool.function.name === 'minecraft_mine_at')
+          if (waypoint == null || mineAt == null)
+            throw new Error('Expected waypoint and mine_at tools')
+
+          if (turnIndex === 0) {
+            await waypoint.execute(
+              { action: 'set', name: 'camp' },
+              { messages: request.messages, toolCallId: 'wp-set-1' },
+            )
+          }
+          else {
+            await mineAt.execute(
+              { target: '8,64,9' },
+              { messages: request.messages, toolCallId: 'mine-e2e-1' },
+            )
+          }
+          turnIndex += 1
+        },
+      },
+    })
+
+    try {
+      await expect(runtime.ingest({
+        sessionId: 'companion-voice',
+        turnId: 'expand-turn-1',
+        text: '记住这里叫 camp',
+      })).resolves.toMatchObject({ status: 'executed' })
+      await bus.flush()
+
+      await expect(runtime.ingest({
+        sessionId: 'companion-voice',
+        turnId: 'expand-turn-2',
+        text: '挖那个坐标',
+      })).resolves.toMatchObject({ status: 'executed' })
+      await bus.flush()
+
+      expect(executeAction).toHaveBeenCalledWith('mineBlockAt', {
+        x: 8,
+        y: 64,
+        z: 9,
+      })
+
+      const commands = bus.stageSent.flatMap(event =>
+        event.type === 'game:coop:command' ? [event.data.command] : [],
+      )
+      expect(commands).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          capabilityId: 'minecraft.waypoint',
+          input: { action: 'set', name: 'camp' },
+        }),
+        expect.objectContaining({
+          capabilityId: 'minecraft.mine_at',
+          input: { target: '8,64,9' },
+        }),
+      ]))
+
+      const mineStates = bus.minecraftSent.flatMap(event =>
+        event.type === 'game:coop:action'
+        && event.data.event.capabilityId === 'minecraft.mine_at'
+          ? [event.data.event.state]
+          : [],
+      )
+      expect(mineStates).toEqual(['queued', 'running', 'succeeded'])
+
+      const waypointStates = bus.minecraftSent.flatMap(event =>
+        event.type === 'game:coop:action'
+        && event.data.event.capabilityId === 'minecraft.waypoint'
+          ? [event.data.event.state]
+          : [],
+      )
+      expect(waypointStates).toContain('succeeded')
+      expect(modelRequests).toHaveLength(2)
     }
     finally {
       runtime.dispose()

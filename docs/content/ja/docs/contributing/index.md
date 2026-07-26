@@ -137,7 +137,7 @@ npm i -g @antfu/ni
 
 ## 開発したいアプリケーションを選択する
 
-この fork の第一級サーフェスは **Web companion**、**ローカル WS hub**、**ゲーム adapter**。ホスト型ログインは無し — 設定画面でプロバイダを構成。詳細は [`.github/CONTRIBUTING.md`](https://github.com/moeru-ai/airi/blob/main/.github/CONTRIBUTING.md)。
+この fork の第一級サーフェスは **Web companion**、**ローカル WS hub**、**ゲーム adapter**。ホスト型ログインは無し — 設定画面でプロバイダを構成。エンジニアリング契約は本リポジトリの `docs/handbook/`（`architecture.md`、`game-companion.md`）。
 
 ### Stage Web（デフォルト）
 

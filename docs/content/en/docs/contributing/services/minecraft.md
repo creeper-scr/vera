@@ -11,15 +11,23 @@ cd services/minecraft
 
 Start a Minecraft client, export your world with desired port, and fill-in the port number in `.env.local`.
 
-Configure `.env`
+Configure `.env.local` from the example
 
 ```shell
-cp .env .env.local
+cp .env.example .env.local
 ```
 
 Edit the credentials in `.env.local`.
 
-Run the bot
+For the full companion loop (web + WS hub + bot + Doubao relay) from repo root:
+
+```shell
+pnpm dev:play
+```
+
+Layering: `docs/handbook/game-companion.md`.
+
+Run the bot alone
 
 ```shell
 pnpm -F @proj-vera/minecraft-bot start

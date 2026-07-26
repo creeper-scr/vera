@@ -14,7 +14,6 @@ import { footnote } from '@mdit/plugin-footnote'
 import { tasklist } from '@mdit/plugin-tasklist'
 import { defineConfig, postcssIsolateStyles } from 'vitepress'
 
-import { version } from '../../package.json'
 import { webLive } from './constants.ts'
 import { teamMembers } from './contributors'
 import {
@@ -25,7 +24,6 @@ import {
   projectDescription,
   projectName,
   projectShortName,
-  releases,
   x,
 } from './meta'
 import { frontmatterAssets } from './plugins/vite-frontmatter-assets'
@@ -93,13 +91,6 @@ export default defineConfig<ThemeConfig>({
         // https://vitepress.dev/reference/default-theme-config
         nav: [
           { text: 'Docs', link: withBase('/en/docs/overview/') },
-          { text: 'Blog', link: withBase('/en/blog/') },
-          {
-            text: `v${version}`,
-            items: [
-              { text: 'Release Notes ', link: releases },
-            ],
-          },
           {
             text: 'About',
             items: [
@@ -135,7 +126,6 @@ export default defineConfig<ThemeConfig>({
             icon: 'lucide:rocket',
             items: [
               { text: 'Introduction', link: withBase('/en/docs/overview/') },
-              { text: 'Versions & Downloads', link: withBase('/en/docs/overview/versions') },
               { text: 'About AI VTuber', link: withBase('/en/docs/overview/about-ai-vtuber') },
               { text: 'About Neuro-sama', link: withBase('/en/docs/overview/about-neuro-sama') },
               { text: 'Other Similar Projects', link: withBase('/en/docs/overview/other-similar-projects') },
@@ -194,14 +184,6 @@ export default defineConfig<ThemeConfig>({
             ],
           },
           {
-            text: 'Chronicles',
-            icon: 'lucide:calendar-days',
-            items: [
-              { text: 'Initial Publish v0.1.0', link: withBase('/en/docs/chronicles/version-v0.1.0/') },
-              { text: 'Before Story v0.0.1', link: withBase('/en/docs/chronicles/version-v0.0.1/') },
-            ],
-          },
-          {
             text: 'Characters',
             icon: 'lucide:scan-face',
             link: withBase('/en/characters/'),
@@ -215,10 +197,6 @@ export default defineConfig<ThemeConfig>({
               link: webLive,
               primary: true,
               target: '_self',
-            },
-            {
-              text: 'Download',
-              link: withBase('/en/docs/overview/versions'),
             },
             {
               text: 'Get Started',
@@ -235,13 +213,6 @@ export default defineConfig<ThemeConfig>({
         // https://vitepress.dev/reference/default-theme-config
         nav: [
           { text: '文档', link: withBase('/zh-Hans/docs/overview/') },
-          { text: '博客 / 开发日志', link: withBase('/zh-Hans/blog/') },
-          {
-            text: `v${version}`,
-            items: [
-              { text: '发布说明 ', link: releases },
-            ],
-          },
           {
             text: '关于',
             items: [
@@ -277,18 +248,9 @@ export default defineConfig<ThemeConfig>({
             icon: 'lucide:rocket',
             items: [
               { text: '这是什么项目？', link: withBase('/zh-Hans/docs/overview/') },
-              { text: '版本与下载', link: withBase('/zh-Hans/docs/overview/versions') },
               { text: '有关 AI VTuber', link: withBase('/zh-Hans/docs/overview/about-ai-vtuber') },
               { text: '有关 Neuro-sama', link: withBase('/zh-Hans/docs/overview/about-neuro-sama') },
               { text: '其他类似项目', link: withBase('/zh-Hans/docs/overview/other-similar-projects') },
-              {
-                text: '编年史',
-                collapsed: true,
-                items: [
-                  { text: '首次公开 v0.1.0', link: withBase('/zh-Hans/docs/chronicles/version-v0.1.0/') },
-                  { text: '先前的故事 v0.0.1', link: withBase('/zh-Hans/docs/chronicles/version-v0.0.1/') },
-                ],
-              },
               { text: '角色', link: withBase('/zh-Hans/characters/') },
             ],
           },
@@ -459,10 +421,6 @@ export default defineConfig<ThemeConfig>({
               target: '_self',
             },
             {
-              text: '下载',
-              link: withBase('/zh-Hans/docs/overview/versions'),
-            },
-            {
               text: '使用教程',
               link: withBase('/zh-Hans/docs/overview/'),
             },
@@ -477,13 +435,6 @@ export default defineConfig<ThemeConfig>({
         // https://vitepress.dev/reference/default-theme-config
         nav: [
           { text: 'ドキュメント', link: withBase('/ja/docs/overview/') },
-          { text: 'ブログ', link: withBase('/ja/blog/') },
-          {
-            text: `v${version}`,
-            items: [
-              { text: 'リリースノート', link: releases },
-            ],
-          },
           {
             text: '概要',
             items: [
@@ -519,7 +470,6 @@ export default defineConfig<ThemeConfig>({
             icon: 'lucide:rocket',
             items: [
               { text: 'はじめに', link: withBase('/ja/docs/overview/') },
-              { text: 'バージョンとダウンロード', link: withBase('/ja/docs/overview/versions') },
               { text: 'AI VTuberについて', link: withBase('/ja/docs/overview/about-ai-vtuber') },
               { text: 'Neuro-samaについて', link: withBase('/ja/docs/overview/about-neuro-sama') },
               { text: 'その他の類似プロジェクト', link: withBase('/ja/docs/overview/other-similar-projects') },
@@ -577,14 +527,6 @@ export default defineConfig<ThemeConfig>({
             ],
           },
           {
-            text: '年表',
-            icon: 'lucide:calendar-days',
-            items: [
-              { text: '初公開 v0.1.0', link: withBase('/ja/docs/chronicles/version-v0.1.0/') },
-              { text: '前日譚 v0.0.1', link: withBase('/ja/docs/chronicles/version-v0.0.1/') },
-            ],
-          },
-          {
             text: 'キャラクター',
             icon: 'lucide:scan-face',
             link: withBase('/ja/characters/'),
@@ -598,10 +540,6 @@ export default defineConfig<ThemeConfig>({
               link: webLive,
               primary: true,
               target: '_self',
-            },
-            {
-              text: 'ダウンロード',
-              link: withBase('/ja/docs/overview/versions'),
             },
             {
               text: 'はじめに',

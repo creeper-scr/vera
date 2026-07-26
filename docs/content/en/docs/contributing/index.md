@@ -141,7 +141,7 @@ You don't need to care about the package manager, `ni` will help you choose the 
 
 ## Choose the application you want to develop on
 
-First-class surfaces in this fork: **web companion**, **local WS hub**, **game adapters**. No hosted login — configure providers in settings. Full detail: [`.github/CONTRIBUTING.md`](https://github.com/moeru-ai/airi/blob/main/.github/CONTRIBUTING.md).
+First-class surfaces in this fork: **web companion**, **local WS hub**, **game adapters**. No hosted login — configure providers in settings. Engineering contracts live in this repo under `docs/handbook/` (see `architecture.md`, `game-companion.md`).
 
 ### Stage Web (default)
 

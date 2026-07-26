@@ -137,7 +137,7 @@ npm i -g @antfu/ni
 
 ## 选择要开发的应用
 
-本 fork 一等公民：网页 companion、本地 WS hub、游戏适配器。**无托管登录** —— 在设置里配服务商。完整说明见 [`.github/CONTRIBUTING.md`](https://github.com/moeru-ai/airi/blob/main/.github/CONTRIBUTING.md)。
+本 fork 一等公民：网页 companion、本地 WS hub、游戏适配器。**无托管登录** —— 在设置里配服务商。工程契约见本仓库 `docs/handbook/`（`architecture.md`、`game-companion.md`）。
 
 ### Stage Web（默认）
 

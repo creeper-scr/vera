@@ -11,15 +11,23 @@ cd services/minecraft
 
 Minecraft クライアントを起動し、希望のポートでワールドを公開し、そのポート番号を `.env.local` に記入します。
 
-`.env` の設定
+`.env.example` から `.env.local` を作成
 
 ```shell
-cp .env .env.local
+cp .env.example .env.local
 ```
 
 `.env.local` 内の認証情報を編集します。
 
-ボットの実行
+フル companion ループ（web + WS hub + bot + Doubao relay）はリポジトリルートで:
+
+```shell
+pnpm dev:play
+```
+
+レイヤリング: `docs/handbook/game-companion.md`。
+
+ボット単体の実行
 
 ```shell
 pnpm -F @proj-vera/minecraft-bot start

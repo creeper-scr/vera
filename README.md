@@ -4,6 +4,20 @@ Open-source AI game companion (fork of [Moeru Project AIRI](https://github.com/m
 
 No official cryptocurrency or token.
 
+## Notice / 说明
+
+> **English**
+>
+> This repository was built on top of [AIRI](https://github.com/moeru-ai/airi) during [AdventureX 2026](https://adventure-x.org/). It does work, but we no longer have the capacity to maintain a codebase of this scale. We are starting a new repository to pursue the experience we actually want — lightweight and elegant by design.
+>
+> Continued development: **[muzhang-studio/vera](https://github.com/muzhang-studio/vera)**
+>
+> **中文**
+>
+> 本仓库是我们在 [AdventureX 2026](https://adventure-x.org/) 黑客松中基于 [AIRI](https://github.com/moeru-ai/airi) 开发的成果。它确实能够正常工作，但以我们目前的精力，已无力长期维护如此庞大的项目。我们计划在新仓库中重新实现我们真正想要的功能——同时保持轻量与优雅。
+>
+> 后续开发请移步：**[muzhang-studio/vera](https://github.com/muzhang-studio/vera)**
+
 ## Run
 
 Node.js 23+, [corepack](https://github.com/nodejs/corepack) + pnpm.
